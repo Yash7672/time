@@ -99,7 +99,7 @@ dependencies {
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
-    implementation("androidx.core:core-ktx:1.17.0")
+    implementation("androidx.core:core-ktx:1.19.1")
     implementation("androidx.activity:activity-compose:1.13.0")
     // lifecycle 2.11.0 requires compileSdk 37 + AGP 9.1; 2.10.0 is the newest
     // line that builds against compileSdk 36 / AGP 9.0.1.
