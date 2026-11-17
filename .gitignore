@@ -9,6 +9,10 @@ keystore.properties
 *.jks
 *.keystore
 
+# Build / CI logs and report dumps (never commit)
+*.log
+ci-reports/
+
 # IDE
 .idea/
 *.iml

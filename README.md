@@ -1,5 +1,10 @@
 # CHRONOS
 
+[![Android CI](https://github.com/Yash7672/time/actions/workflows/android.yml/badge.svg)](https://github.com/Yash7672/time/actions/workflows/android.yml)
+[![CodeQL](https://github.com/Yash7672/time/actions/workflows/codeql.yml/badge.svg)](https://github.com/Yash7672/time/actions/workflows/codeql.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Android%208.0%2B-brightgreen.svg)](#building)
+
 **An AMOLED space clock for Android.** Pure-black background, a precise live
 clock, a slow dim starfield, and privacy-first notification icons — built for
 maximum battery efficiency on OLED displays.
@@ -129,10 +134,11 @@ All three keep clock accuracy independent of visual effects.
 .\gradlew.bat :app:lintDebug           # 0 errors
 ```
 
-### Release APK (unsigned fallback → debug-signed)
+### Release APK
 
 ```powershell
-.\gradlew.bat :app:assembleRelease
+.\gradlew.bat :app:assembleRelease   # APK:  app/build/outputs/apk/release/
+.\gradlew.bat :app:bundleRelease     # AAB:  app/build/outputs/bundle/release/ (Play Store)
 ```
 
 Release builds are minified (`isMinifyEnabled` + resource shrinking) with
@@ -140,34 +146,75 @@ ProGuard rules in `app/proguard-rules.pro`.
 
 ### Release signing (never commit secrets)
 
-Create `keystore.properties` in the repo root (it is git-ignored):
+`keystore.properties` in the repo root (git-ignored, already present locally)
+holds the permanent release key:
 
 ```properties
-storeFile=release.jks
+storeFile=chronos-release.jks
 storePassword=***
 keyAlias=chronos
 keyPassword=***
 ```
 
-If the file is absent, the release build falls back to the debug key so CI
-always produces an installable APK.
+Verify a build is release-signed (must **not** say `CN=Android Debug`):
+
+```powershell
+apksigner verify --print-certs app\build\outputs\apk\release\app-release.apk
+```
+
+If `keystore.properties` is absent (fresh CI checkout without secrets), the
+release build falls back to the debug key so an installable APK always exists —
+but **never ship that fallback**: sideloads signed with different keys cannot be
+installed over each other, and debug certificates trigger OEM/Play Protect
+"app risk" warnings. Back up `chronos-release.jks` + `keystore.properties` in a
+password manager — losing them means losing the ability to update the app.
 
 ---
 
 ## Continuous integration
 
-`.github/workflows/android.yml` runs on every push to `main` and on version
-tags:
+`.github/workflows/android.yml` runs on every push to `main`, on PRs, and on
+version tags:
 
-1. Sets up JDK 17 + Android SDK
-2. Runs unit tests
-3. Runs lint
-4. Builds a release APK and uploads it as an artifact
-5. On a `v*` tag, attaches the APK to a GitHub Release
+1. JDK 17 (Temurin) + Android SDK (`platforms;android-36`, `build-tools;36.0.0`)
+2. `bash gradlew :app:testDebugUnitTest` — unit tests
+3. `bash gradlew :app:lintDebug` — lint (must stay at 0 errors)
+4. `bash gradlew :app:assembleRelease :app:bundleRelease` — signed APK + Play AAB
+5. `bash gradlew :app:assembleDebug` — debug APK for testers
+6. Uploads reports + all three artifacts; on a `v*` tag, attaches APK + AAB to
+   a GitHub Release
+
+Hardening: every action is **pinned to a full commit SHA**, workflow tokens use
+**least-privilege permissions** (`contents: read`; only the release job gets
+`contents: write`), Gradle wrapper checksums are **validated**, and
+[Dependabot](.github/dependabot.yml) keeps actions + Gradle dependencies
+updated. A separate [CodeQL](.github/workflows/codeql.yml) workflow scans the
+Kotlin sources on every push, PR, and weekly.
 
 Release signing in CI uses secrets (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`,
 `KEY_ALIAS`, `KEY_PASSWORD`) — if they are not configured the workflow still
-produces a debug-signed, installable APK. No secrets are committed.
+produces a debug-signed, installable APK. No secrets are committed. See
+[docs/PLAY_STORE.md](docs/PLAY_STORE.md) §1 for how to set them:
+
+```powershell
+# prints the value to paste into GitHub → Settings → Secrets and variables → Actions
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("chronos-release.jks"))
+Get-Content keystore.properties   # storePassword / keyAlias / keyPassword
+```
+
+## Security & policy compliance
+
+| Requirement | Where |
+| ----------- | ----- |
+| GitHub security policy (vulnerability reporting) | [SECURITY.md](SECURITY.md) |
+| Privacy policy (Play Store URL) | [PRIVACY_POLICY.md](PRIVACY_POLICY.md) |
+| Play Console: Data safety, permission declarations, AAB | [docs/PLAY_STORE.md](docs/PLAY_STORE.md) |
+| Contribution rules | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| Issue & PR templates | [.github/ISSUE_TEMPLATE/](.github/ISSUE_TEMPLATE/) · [.github/PULL_REQUEST_TEMPLATE.md](.github/PULL_REQUEST_TEMPLATE.md) |
+| Code scanning (Kotlin) | [.github/workflows/codeql.yml](.github/workflows/codeql.yml) |
+| Dependency updates | [.github/dependabot.yml](.github/dependabot.yml) |
+| Supply-chain: SHA-pinned actions, wrapper validation, least-privilege tokens | [.github/workflows/android.yml](.github/workflows/android.yml) |
+| Manifest hardening: no backup, no cleartext, explicit `exported`, signature-guarded listener, `specialUse` FGS subtype, immutable intents | `app/src/main/AndroidManifest.xml` |
 
 ---
 
@@ -212,11 +259,14 @@ start and build time lower.
 
 ## Privacy
 
+Full policy: [PRIVACY_POLICY.md](PRIVACY_POLICY.md).
+
 - No account, login, analytics, advertising, or crash reporting.
 - **No internet permission is declared** — CHRONOS cannot send data anywhere.
 - No contacts, location, microphone, camera, or storage access.
 - Notification content is memory-only and never persisted.
 - Settings are stored locally via Jetpack DataStore.
+- `android:allowBackup="false"` — nothing is backed up or transferred to a new device.
 
 ## Licence
 

@@ -1,0 +1,70 @@
+name: Bug report
+description: Something in CHRONOS is broken or behaving unexpectedly
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. **Security issues must go through [Security → Report a vulnerability](https://github.com/Yash7672/time/security/advisories/new), not this form.**
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: Shown in Settings → About (e.g. 1.0.0, versionCode 1)
+      placeholder: "1.0.0"
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device & Android version
+      placeholder: "e.g. Pixel 8, Android 16 (Build BP2A.250605.031)"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where does it happen?
+      options:
+        - Clock / time accuracy
+        - Star background
+        - Notifications / icons
+        - Floating overlay clock
+        - Settings not saving
+        - Battery / performance
+        - Install or update problem
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the app…
+        2. Tap …
+        3. See error
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+      description: Include the exact error/warning text if it's an install problem ("App risk", "Privacy risk", "App blocked", "App not installed").
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues for duplicates
+          required: true
+        - label: This still happens on the latest release APK
+          required: true

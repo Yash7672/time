@@ -1,0 +1,35 @@
+name: Feature request
+description: Suggest an improvement to CHRONOS
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        CHRONOS is intentionally tiny: an offline AMOLED clock with optional notification icons and a floating overlay.
+        Requests that add **new permissions**, **network access**, accounts, ads, or trackers will be declined by design.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: What is hard or impossible today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: dropdown
+    id: permissions
+    attributes:
+      label: Does this need a new Android permission?
+      options:
+        - No new permissions
+        - Yes, a new permission (explain below)
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Extra context (mockups, screenshots, alternatives considered)
