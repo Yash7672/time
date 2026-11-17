@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">CHRONOS</string>
+    <string name="notification_listener_label">CHRONOS notification access</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="back">Back</string>
+
+    <string name="section_clock">Clock</string>
+    <string name="section_appearance">Appearance</string>
+    <string name="section_stars">Star background</string>
+    <string name="section_notifications">Notifications</string>
+    <string name="section_display">Display</string>
+    <string name="section_performance">Performance</string>
+    <string name="section_about">About</string>
+
+    <string name="about_version">App version</string>
+    <string name="about_privacy">Privacy</string>
+    <string name="about_licenses">Open-source licences</string>
+    <string name="about_github">GitHub repository</string>
+
+    <string name="privacy_text">CHRONOS has no account, no analytics, no advertising and no internet permission. Notification content stays on this device in memory only and is never uploaded or written to disk.</string>
+
+    <string name="notification_access_rationale">To show app icons of your notifications, CHRONOS needs notification access. Android delivers this access only after you approve CHRONOS on the system screen that opens next. CHRONOS reads notification metadata on-device only.</string>
+    <string name="overlay_rationale">The floating clock needs the "display over other apps" special access. Android requires you to approve it on the system screen that opens next. You can revoke it at any time.</string>
+</resources>

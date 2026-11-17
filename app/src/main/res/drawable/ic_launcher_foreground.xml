@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Minimal clock glyph inside a starfield ring: white on black, AMOLED friendly. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Outer ring -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M54,30 A24,24 0 1 1 53.9,30"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"
+        android:strokeWidth="3.5" />
+
+    <!-- Hands -->
+    <path
+        android:pathData="M54,38 L54,54 L66,60"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="3.5" />
+
+    <!-- Orbit star -->
+    <path
+        android:fillColor="#8FB4FF"
+        android:pathData="M84,26 L85.6,30.4 L90,32 L85.6,33.6 L84,38 L82.4,33.6 L78,32 L82.4,30.4 Z" />
+    <path
+        android:fillColor="#C9A6FF"
+        android:pathData="M24,74 L25.1,77.2 L28,78 L25.1,78.8 L24,82 L22.9,78.8 L20,78 L22.9,77.2 Z" />
+</vector>
