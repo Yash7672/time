@@ -31,7 +31,7 @@ CHRONOS is an offline, single-purpose clock. The design assumptions:
 - **No network surface.** The app declares no `INTERNET` permission; it cannot send data anywhere. Cleartext traffic is disabled (`android:usesCleartextTraffic="false"`).
 - **No backup surface.** `android:allowBackup="false"` — notification data and preferences are excluded from Android auto-backup and device-to-device transfer.
 - **Notification content is ephemeral.** The listener keeps icons/titles in memory only for the current session; nothing is written to disk, databases, or logs, and nothing is uploaded (impossible without the network permission).
-- **Components are not exported** unless the system requires it (`exported="true"` only on the launcher activity and the notification-listener service, which is guarded by the signature-level `BIND_NOTIFICATION_LISTENER_SERVICE` permission). The overlay service is `exported="false"` with `FLAG_IMMUTABLE` intents.
+- **Components are not exported** unless the system requires it (`exported="true"` only on the launcher activity and the notification-listener service, which is guarded by the signature-level `BIND_NOTIFICATION_LISTENER_SERVICE` permission).
 - **Release builds are minified and resource-shrunk** (R8), signed with a permanent release key, and contain no debug surfaces.
 
 In scope for reports: any path that exfiltrates or persists notification content, bypasses a permission guard, allows a third-party app to drive CHRONOS services, or leaks data through backup/logcat.

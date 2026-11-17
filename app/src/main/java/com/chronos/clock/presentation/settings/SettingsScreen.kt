@@ -49,25 +49,6 @@ fun SettingsScreen(
     val context = LocalContext.current
 
     var showAppPicker by remember { mutableStateOf(false) }
-    var overlayRequested by remember { mutableStateOf(false) }
-    // Whether the floating overlay is actually running right now.
-    var overlayEnabled by remember { mutableStateOf(false) }
-
-    // Reflect overlay permission once the user returns from the system screen.
-    LaunchedEffect(Unit) {
-        while (true) {
-            val granted = com.chronos.clock.services.OverlayService.hasOverlayPermission(context)
-            if (granted && overlayRequested) {
-                overlayEnabled = com.chronos.clock.services.OverlayService.startIfAllowed(context)
-                overlayRequested = false
-            }
-            if (!granted) {
-                overlayEnabled = false
-                overlayRequested = false
-            }
-            kotlinx.coroutines.delay(1_500)
-        }
-    }
 
     // Poll listener access while this screen is visible so the master switch
     // reflects a grant made on the system screen (user returns here after).
@@ -173,31 +154,9 @@ fun SettingsScreen(
                     onOpenAppPicker = { showAppPicker = true },
                 )
 
-                DisplaySettingsSection(
-                    settings = settings,
-                    overlayEnabled = overlayEnabled,
-                    onChange = { newSettings ->
-                        viewModel.updateSettings { newSettings }
-                    },
-                    onOverlayChange = { enable ->
-                        if (enable) {
-                            // Request the special access first; the switch flips
-                            // only after the system reports it granted.
-                            runCatching {
-                                context.startActivity(
-                                    android.content.Intent(
-                                        android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                                        android.net.Uri.parse("package:${context.packageName}"),
-                                    ),
-                                )
-                            }
-                        } else {
-                            com.chronos.clock.services.OverlayService.stop(context)
-                            overlayEnabled = false
-                        }
-                        overlayRequested = enable
-                    },
-                )
+                DisplaySettingsSection(settings = settings) { newSettings ->
+                    viewModel.updateSettings { newSettings }
+                }
 
                 PerformanceSettingsSection(settings = settings.performance) { newPerf ->
                     viewModel.updateSettings { it.copy(performance = newPerf) }

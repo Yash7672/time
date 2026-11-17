@@ -1,7 +1,6 @@
 package com.chronos.clock
 
 import android.app.Application
-import com.chronos.clock.core.permissions.PermissionHelper
 import com.chronos.clock.data.repository.SettingsRepositoryImpl
 import com.chronos.clock.notifications.NotificationManager
 import com.chronos.clock.notifications.NotificationRepository
@@ -20,7 +19,6 @@ class ChronosApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        PermissionHelper.bindPackageName(packageName)
         container = AppContainer(this)
     }
 }

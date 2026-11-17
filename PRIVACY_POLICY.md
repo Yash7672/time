@@ -26,20 +26,18 @@ There are no third-party analytics, SDKs, ads, or trackers in this app.
 | ---- | -------------- | -------- | ------------------ |
 | Clock & appearance settings (12/24h, theme, star density, modes) | Android DataStore (app-private storage) | Until you clear app data or uninstall | **No** |
 | Notification **icons and titles** shown around the clock | Device RAM only | Current session; cleared when the app closes or the listener disconnects | **No** |
-| Overlay (floating clock) position/enable state | App-private settings | Until you disable it or uninstall | **No** |
 
 Notification content is never written to disk, never logged, never uploaded, and never backed up (`android:allowBackup="false"`).
 
 ## Permissions and why they exist
 
-All special permissions are **optional and user-granted** through Android system screens:
+The only special permission is **optional and user-granted** through an Android system screen:
 
 - **Notification access (`BIND_NOTIFICATION_LISTENER_SERVICE`)** — optional. Used only to display the small app icons of your notifications around the clock. CHRONOS reads icon/title/package only; it does not read message bodies for storage or transmission, does not dismiss notifications unless you ask it to, and does not persist content.
-- **Display over other apps (`SYSTEM_ALERT_WINDOW`)** — optional. Powers the floating AMOLED clock when you enable it in Settings.
-- **Foreground service (`FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE`)** — required by Android only while the optional overlay is running, so the system keeps it alive and shows its own persistent notification.
-- **Post notifications (`POST_NOTIFICATIONS`)** — optional; only so the overlay's own service notification can be shown on Android 13+.
 
-CHRONOS requests **no** camera, microphone, location, contacts, storage, phone, or SMS permissions, and **no** internet permission.
+CHRONOS requests **no** camera, microphone, location, contacts, storage, phone, or SMS permissions, **no** overlay (`SYSTEM_ALERT_WINDOW`), **no** foreground-service or post-notification permissions, and **no** internet permission.
+
+**Sensors:** the ambient light sensor powers the optional auto-brightness feature (dim the clock in a dark room, brighten it in a bright room). It is read only while CHRONOS is open, used only to adjust this app's own window brightness, and the readings are never stored and never leave the device.
 
 ## Children's privacy
 

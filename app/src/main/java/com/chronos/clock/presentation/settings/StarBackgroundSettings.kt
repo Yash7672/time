@@ -52,12 +52,12 @@ fun StarBackgroundSettingsSection(
             checked = settings.twinkling,
             onCheckedChange = { onChange(settings.copy(twinkling = it)) },
             description = "Gentle alpha modulation only; disabled automatically " +
-                "in battery-friendly mode.",
+                "when battery saver is on.",
         )
     }
 
     NoteText(
-        "Star updates are throttled to ~15 fps (5 fps in battery-friendly " +
-            "mode) and pause completely whenever CHRONOS is not visible.",
+        "Star updates are throttled to ~15 fps, freeze when battery saver " +
+            "is on, and pause completely whenever CHRONOS is not visible.",
     )
 }

@@ -81,14 +81,15 @@ All three keep clock accuracy independent of visual effects.
 3. **Star background** — enable, density (Low/Med/High), speed, twinkle
 4. **Notifications** — access toggle, app selection, icons, indicators,
    privacy mode, quick reply, bubbles
-5. **Display** — keep-awake, fullscreen, rotation, floating overlay, brightness
-6. **Performance** — battery-friendly, battery saver, reduce animations,
-   pause-when-inactive, lightweight rendering
+5. **Display** — auto brightness (light sensor), keep-awake, fullscreen
+6. **Performance** — battery saver (star throttling, inactivity pausing and
+   low-fps rendering are automatic)
 7. **About** — version, privacy statement, licences, GitHub link, known
    Android limitations
 
 ### UI
-- Portrait and landscape layouts (auto-rotates by default; can be locked).
+- Portrait and landscape layouts: auto-rotates with the sensor **while the
+  app is open** and never changes your system rotation setting.
 - Settings gear sits **bottom-left, hidden by default** — tap anywhere to reveal
   it with a fade; it auto-hides after 3 seconds of inactivity.
 
@@ -105,8 +106,6 @@ All three keep clock accuracy independent of visual effects.
   application icon.
 - **Quick replies** work only where the source app declares a `RemoteInput`
   reply action.
-- **Overlay**: the optional floating clock needs the "display over other apps"
-  special access; Android grants it per-app and it can be revoked at any time.
 - **Battery claims**: no specific percentage improvement is claimed — those
   numbers require measurement on a real AMOLED device, and this README does not
   fabricate them. The design choices above are the measurable levers.
@@ -223,7 +222,7 @@ Get-Content keystore.properties   # storePassword / keyAlias / keyPassword
 ```
 app/src/main/java/com/chronos/clock/
 ├── ChronosApp.kt              # Application + manual service container
-├── MainActivity.kt            # Display flags (awake/fullscreen/rotation/brightness)
+├── MainActivity.kt            # Display flags, sensor rotation, auto brightness
 ├── core/
 │   ├── constants/AppConstants.kt
 │   ├── lifecycle/ClockTicker.kt     # second-boundary-aligned tick source
@@ -247,7 +246,6 @@ app/src/main/java/com/chronos/clock/
 │   ├── home/                        # HomeScreen, ClockView, DateView, icons, gear
 │   ├── settings/                    # 7 sections + app picker
 │   └── theme/                       # AMOLED palette, theme, typography
-├── services/OverlayService.kt       # optional floating clock
 └── ui/components/SettingsRows.kt
 ```
 

@@ -2,20 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Overlay (floating clock). Special access: requested at runtime only when
-         the user enables the overlay feature in Settings. -->
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-
-    <!-- Required to run the optional overlay as a foreground service. -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-
-    <!-- Only used to show the overlay's own foreground-service notification
-         on Android 13+. CHRONOS never posts any other notification. -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-
-    <!-- CHRONOS intentionally declares NO internet, contacts, location,
-         microphone, camera or storage permission. -->
+    <!-- CHRONOS declares NO internet, contacts, location, microphone,
+         camera, storage, overlay (SYSTEM_ALERT_WINDOW) or notification
+         posting permission. The only special access is the consent-gated
+         notification listener below. The ambient light sensor used for
+         auto brightness needs no permission. -->
 
     <application
         android:name=".ChronosApp"
@@ -28,12 +19,16 @@
         android:usesCleartextTraffic="false"
         tools:targetApi="36">
 
+        <!-- sensor = rotate with the device while THIS activity is open,
+             regardless of the system rotation lock. The system rotation
+             setting itself is never written, so the home screen and other
+             apps are unaffected when CHRONOS is closed. -->
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|density|uiMode|keyboardHidden"
             android:exported="true"
             android:launchMode="singleTask"
-            android:screenOrientation="unspecified"
+            android:screenOrientation="sensor"
             android:theme="@style/Theme.Chronos">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -54,19 +49,6 @@
             <meta-data
                 android:name="android.service.notification.allowed_listener_activity"
                 android:value="com.chronos.clock/.MainActivity" />
-        </service>
-
-        <!-- Optional floating clock overlay; only started after the user grants
-             the "display over other apps" special access. Uses the specialUse
-             foreground-service type: Android has no dedicated overlay type. -->
-        <service
-            android:name=".services.OverlayService"
-            android:exported="false"
-            android:foregroundServiceType="specialUse"
-            android:stopWithTask="false">
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Optional floating clock overlay shown over other apps at the user's request" />
         </service>
     </application>
 </manifest>

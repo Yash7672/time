@@ -2,10 +2,8 @@ package com.chronos.clock.presentation.settings
 
 import androidx.compose.runtime.Composable
 import com.chronos.clock.domain.model.AppSettings
-import com.chronos.clock.domain.model.RotationPreference
 import com.chronos.clock.presentation.theme.Chronos
 import com.chronos.clock.ui.components.NoteText
-import com.chronos.clock.ui.components.OptionRow
 import com.chronos.clock.ui.components.SectionHeader
 import com.chronos.clock.ui.components.SwitchRow
 
@@ -14,15 +12,26 @@ import com.chronos.clock.ui.components.SwitchRow
  *
  * Keep-screen-awake is off by default and clearly warns about battery cost.
  * Brightness is a window-level override only; system brightness is untouched.
+ * Rotation is automatic while the app is open (activity-level sensor
+ * orientation) and the system rotation setting is never written.
  */
 @Composable
 fun DisplaySettingsSection(
     settings: AppSettings,
-    overlayEnabled: Boolean,
     onChange: (AppSettings) -> Unit,
-    onOverlayChange: (Boolean) -> Unit,
 ) {
     SectionHeader("Display")
+
+    SwitchRow(
+        title = "Auto brightness",
+        checked = settings.display.autoBrightness,
+        onCheckedChange = {
+            onChange(settings.copy(display = settings.display.copy(autoBrightness = it)))
+        },
+        description = "Uses the phone's light sensor: the clock dims in a " +
+            "dark room and brightens in a bright one — only while CHRONOS " +
+            "is open. Off = fixed manual window brightness.",
+    )
 
     SwitchRow(
         title = "Keep screen awake",
@@ -49,61 +58,11 @@ fun DisplaySettingsSection(
         description = "Hides the status and navigation bars for an edge-to-edge clock.",
     )
 
-    OptionRow(
-        title = "Screen rotation",
-        options = RotationPreference.entries,
-        selected = settings.display.rotation,
-        optionLabel = { it.label },
-        onSelect = {
-            onChange(settings.copy(display = settings.display.copy(rotation = it)))
-        },
-        description = "Auto follows the device sensor; Portrait / Landscape " +
-            "lock CHRONOS to that orientation.",
-    )
-
-    SwitchRow(
-        title = "Brightness shortcut",
-        checked = settings.display.brightnessShortcut,
-        onCheckedChange = { enable ->
-            onChange(
-                settings.copy(
-                    display = settings.display.copy(brightnessShortcut = enable),
-                    // Toggling off returns the window to system brightness.
-                    theme = if (enable) {
-                        settings.theme.copy(windowBrightness = 0.85f)
-                    } else {
-                        settings.theme.copy(windowBrightness = -1f)
-                    },
-                ),
-            )
-        },
-        description = "Applies an 85% window-level brightness while CHRONOS is " +
-            "open, and restores the system value when switched off. The system " +
-            "slider itself is never changed.",
-    )
-
-    if (settings.theme.windowBrightness >= 0f && !settings.display.brightnessShortcut) {
-        SwitchRow(
-            title = "Reset to system brightness",
-            checked = false,
-            onCheckedChange = {
-                onChange(settings.copy(theme = settings.theme.copy(windowBrightness = -1f)))
-            },
-            description = "CHRONOS currently overrides its own window brightness.",
-        )
-    }
-
-    SwitchRow(
-        title = "Floating clock overlay",
-        checked = overlayEnabled,
-        onCheckedChange = onOverlayChange,
-        description = "Tiny always-on-top clock (tap to open CHRONOS). Requires " +
-            "the 'display over other apps' special access — Android shows a " +
-            "consent screen. Closing the floating window never closes CHRONOS.",
-    )
-
     NoteText(
-        "Android automatically respects battery saver and the system brightness " +
-            "slider; CHRONOS never writes to either.",
+        "Auto-rotation follows the sensor while CHRONOS is open and never " +
+            "changes your system rotation setting — the home screen and " +
+            "other apps keep your own choice. Android automatically " +
+            "respects battery saver and the system brightness slider; " +
+            "CHRONOS never writes to either.",
     )
 }

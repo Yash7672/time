@@ -42,14 +42,8 @@ Play Console → Policy → App permissions → **Notifications**:
 
 > CHRONOS is an AMOLED clock that decorates its face with the small icons of the user's current notifications. It reads only the package name, app icon and title of posted notifications to render those icons in-app. Content is kept in memory for the visible session only — never written to storage, never logged, never transmitted (the app declares no INTERNET permission), never shared with third parties. It is not used for behavioral tracking, advertising, or data selling. Notification access is optional; the clock works fully without it and the user can revoke it at any time in system settings.
 
-### Display over other apps (`SYSTEM_ALERT_WINDOW`)
-> Optional floating clock. The user explicitly enables it in the app's Settings, is taken to the system toggle, and can disable it at any time. Used only to draw the clock itself over other apps; never observes or captures the screen content beneath it.
-
-### Foreground service — special use (`FOREGROUND_SERVICE_SPECIAL_USE`)
-> Required by Android 14+ to keep the user-enabled floating clock alive while the screen is on. The service shows a persistent, low-priority notification and draws only the clock. Manifest declares `PROPERTY_SPECIAL_USE_FGS_SUBTYPE` accordingly. No data processing, no background location, no media playback.
-
-### Post notifications (`POST_NOTIFICATIONS`)
-> Only so the overlay service's own required notification can appear on Android 13+. No other notifications are sent.
+### Ambient light sensor (no declaration required)
+Auto brightness reads `TYPE_LIGHT` only while the app is visible, to dim/brighten the CHRONOS window itself (dark room → dim, bright room → bright). Readings are used on-device only, never stored and never transmitted. This needs no Play permission declaration (normal sensor, no dangerous permission).
 
 ## 5. Store listing assets
 
@@ -66,7 +60,6 @@ Play Console → Policy → App permissions → **Notifications**:
 - [ ] Data safety form = all "No" answers above
 - [ ] Privacy policy URL added and publicly reachable (raw GitHub link, no login)
 - [ ] Notification-access use-case text submitted
-- [ ] Overlay + special-use FGS justifications submitted
 - [ ] Content rating questionnaire completed (Everyone)
 - [ ] **No** misleading battery/performance percentages anywhere in listing or README (none are claimed — keep it that way unless measured on a real device)
 - [ ] Store listing screenshots match the actual UI

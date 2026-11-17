@@ -1,6 +1,6 @@
 # Contributing to CHRONOS
 
-Thanks for helping improve CHRONOS. This project is deliberately small: an offline AMOLED clock with an optional notification listener and overlay. Keep changes aligned with that scope.
+Thanks for helping improve CHRONOS. This project is deliberately small: an offline AMOLED clock with an optional notification listener. Keep changes aligned with that scope.
 
 ## Ground rules
 

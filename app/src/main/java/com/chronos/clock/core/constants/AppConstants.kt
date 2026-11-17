@@ -2,11 +2,6 @@ package com.chronos.clock.core.constants
 
 /** Global constants for CHRONOS. */
 object AppConstants {
-    /** Notification channel used only for the optional overlay's foreground service. */
-    const val OVERLAY_CHANNEL_ID = "chronos_overlay"
-    const val OVERLAY_CHANNEL_NAME = "Floating clock"
-    const val OVERLAY_NOTIFICATION_ID = 1001
-
     /** Bounds for star-field particle counts by density preset. */
     const val STARS_LOW = 60
     const val STARS_MEDIUM = 120

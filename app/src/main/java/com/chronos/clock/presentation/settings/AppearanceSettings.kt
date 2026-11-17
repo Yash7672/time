@@ -86,8 +86,8 @@ fun AppearanceSettingsSection(
             "${(settings.windowBrightness * 100).toInt()}%"
         },
         description = "Applies only to the CHRONOS window; system brightness is " +
-            "never modified. Set to 100% then use the reset control in " +
-            "Display to follow the system again.",
+            "never modified. This is the fixed fallback used while Auto " +
+            "brightness (Display) is off or the sensor has no reading.",
     )
 }
 

@@ -17,7 +17,6 @@ import com.chronos.clock.domain.model.DisplaySettings
 import com.chronos.clock.domain.model.NotificationPrivacy
 import com.chronos.clock.domain.model.NotificationSettings
 import com.chronos.clock.domain.model.PerformanceSettings
-import com.chronos.clock.domain.model.RotationPreference
 import com.chronos.clock.domain.model.StarDensity
 import com.chronos.clock.domain.model.StarSettings
 import com.chronos.clock.domain.model.StarSpeed
@@ -68,8 +67,7 @@ class SettingsDataStore(
 
         val KEEP_AWAKE = booleanPreferencesKey("keep_screen_awake")
         val FULLSCREEN = booleanPreferencesKey("fullscreen_mode")
-        val ROTATION = stringPreferencesKey("rotation_pref")
-        val BRIGHTNESS_SHORTCUT = booleanPreferencesKey("brightness_shortcut")
+        val AUTO_BRIGHTNESS = booleanPreferencesKey("auto_brightness")
 
         val BATTERY_FRIENDLY = booleanPreferencesKey("battery_friendly")
         val REDUCE_ANIMATIONS = booleanPreferencesKey("reduce_animations")
@@ -155,12 +153,7 @@ class SettingsDataStore(
                 display = DisplaySettings(
                     keepScreenAwake = bool(Keys.KEEP_AWAKE, defaults.display.keepScreenAwake),
                     fullscreen = bool(Keys.FULLSCREEN, defaults.display.fullscreen),
-                    rotation = enum(
-                        Keys.ROTATION,
-                        RotationPreference.entries.toTypedArray(),
-                        defaults.display.rotation,
-                    ),
-                    brightnessShortcut = bool(Keys.BRIGHTNESS_SHORTCUT, defaults.display.brightnessShortcut),
+                    autoBrightness = bool(Keys.AUTO_BRIGHTNESS, defaults.display.autoBrightness),
                 ),
                 performance = PerformanceSettings(
                     batteryFriendly = bool(Keys.BATTERY_FRIENDLY, defaults.performance.batteryFriendly),
@@ -226,8 +219,7 @@ class SettingsDataStore(
             val nd = next.display
             putBool(Keys.KEEP_AWAKE, d.keepScreenAwake, nd.keepScreenAwake)
             putBool(Keys.FULLSCREEN, d.fullscreen, nd.fullscreen)
-            putEnum(Keys.ROTATION, d.rotation, nd.rotation)
-            putBool(Keys.BRIGHTNESS_SHORTCUT, d.brightnessShortcut, nd.brightnessShortcut)
+            putBool(Keys.AUTO_BRIGHTNESS, d.autoBrightness, nd.autoBrightness)
 
             val p = current.performance
             val np = next.performance

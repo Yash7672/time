@@ -74,10 +74,7 @@ fun AboutSection(versionName: String) {
             "or replace another app's notification icon. CHRONOS always shows " +
             "the original application icon.\n" +
             "• Quick replies use the officially supported RemoteInput API and " +
-            "work only where the source app declares a reply action.\n" +
-            "• Overlay: the optional floating clock needs the 'display over " +
-            "other apps' special access; Android denies it per-app and it can " +
-            "be revoked at any time.",
+            "work only where the source app declares a reply action.",
     )
 }
 

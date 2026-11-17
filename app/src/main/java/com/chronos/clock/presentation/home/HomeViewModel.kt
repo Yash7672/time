@@ -9,6 +9,7 @@ import com.chronos.clock.domain.model.AppSettings
 import com.chronos.clock.domain.model.NotificationGroup
 import com.chronos.clock.domain.repository.SettingsRepository
 import com.chronos.clock.notifications.NotificationManager
+import kotlin.math.abs
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -62,6 +63,39 @@ class HomeViewModel(
 
     fun refreshNotificationAccess() {
         _notificationAccess.value = notifications.hasAccess()
+    }
+
+    /**
+     * Ambient light (lux) from the activity's light sensor, EMA-smoothed and
+     * throttled to perceptual changes. `null` = no reading yet (sensor
+     * missing, app in background, or auto brightness just toggled); the UI
+     * then falls back to the manual/system window brightness.
+     */
+    private val _ambientLux = MutableStateFlow<Float?>(null)
+    val ambientLux: StateFlow<Float?> = _ambientLux
+
+    private var smoothedLux: Float = -1f
+
+    /** Called from MainActivity's sensor listener (main thread). */
+    fun onAmbientLux(rawLux: Float) {
+        val smoothed = if (smoothedLux < 0f) {
+            rawLux
+        } else {
+            smoothedLux * 0.8f + rawLux * 0.2f
+        }
+        smoothedLux = smoothed
+        val last = _ambientLux.value
+        // Propagate only perceptual jumps (>=15 lux or >=12%) so a hand
+        // passing over the sensor never flickers the window brightness.
+        if (last == null || abs(smoothed - last) >= maxOf(15f, last * 0.12f)) {
+            _ambientLux.value = smoothed
+        }
+    }
+
+    /** Drops the current reading (sensor unregistered or setting off). */
+    fun resetAmbientLux() {
+        smoothedLux = -1f
+        _ambientLux.value = null
     }
 
     /** Re-emits every 2 s while observed; Settings uses it to auto-detect a grant. */

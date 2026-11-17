@@ -10,7 +10,11 @@ import com.chronos.clock.ui.components.NoteText
 import com.chronos.clock.ui.components.SectionHeader
 import com.chronos.clock.ui.components.SwitchRow
 
-/** Section F — performance and battery controls. */
+/**
+ * Section F — the single strongest battery control. Everything else
+ * (star throttling, inactivity pausing, low-fps rendering) is automatic
+ * and needs no user-facing switch.
+ */
 @Composable
 fun PerformanceSettingsSection(
     settings: PerformanceSettings,
@@ -37,46 +41,18 @@ fun PerformanceSettingsSection(
     }
 
     SwitchRow(
-        title = "Battery-friendly mode",
-        checked = settings.batteryFriendly,
-        onCheckedChange = { onChange(settings.copy(batteryFriendly = it)) },
-        description = "Halves star count, drops updates to ~5 fps and disables " +
-            "twinkling. Clock accuracy is unaffected.",
-    )
-
-    SwitchRow(
         title = "Battery saver",
         checked = settings.batterySaver,
         onCheckedChange = { onChange(settings.copy(batterySaver = it)) },
-        description = "Forces a fully static background regardless of the " +
-            "star settings. Strongest in-app saving.",
-    )
-
-    SwitchRow(
-        title = "Reduce animations",
-        checked = settings.reduceAnimations,
-        onCheckedChange = { onChange(settings.copy(reduceAnimations = it)) },
-        description = "Stops star drift, colon pulse and burn-in drift.",
-    )
-
-    SwitchRow(
-        title = "Pause background effects when inactive",
-        checked = settings.pauseWhenInactive,
-        onCheckedChange = { onChange(settings.copy(pauseWhenInactive = it)) },
-        description = "Freezes the star field 30 s after the last tap; resumes " +
-            "instantly on the next touch.",
-    )
-
-    SwitchRow(
-        title = "Lightweight rendering mode",
-        checked = settings.lightweightRender,
-        onCheckedChange = { onChange(settings.copy(lightweightRender = it)) },
-        description = "Caps particles at 40 and removes per-frame work entirely.",
+        description = "Collapses every background effect to a fully static " +
+            "black screen and honours Android's own battery saver. " +
+            "Clock accuracy is unaffected.",
     )
 
     NoteText(
-        "CHRONOS runs no background service for the clock, holds no wake lock, " +
-            "uses no WorkManager, no location and no network. The clock only " +
-            "ticks while the screen is visible.",
+        "Everything else is automatic: stars throttle to ~15 fps, freeze " +
+            "after 30 s of no touch, and stop entirely when CHRONOS is not " +
+            "visible. The clock runs no background service, holds no wake " +
+            "lock, uses no WorkManager, no location and no network.",
     )
 }

@@ -4,7 +4,6 @@ import android.content.res.Configuration
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,7 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -49,8 +47,8 @@ import kotlinx.coroutines.delay
  * Main clock screen.
  *
  * Layout contract (portrait):
- *   top      → small date + day
- *   centre   → notification icons, then the clock (never overlapping)
+ *   centre   → notification icons, then the clock (time), then the date
+ *              beneath it — time first, date second, never overlapping
  *   bottom-L → settings gear (tap-to-reveal, auto-hide)
  *
  * Landscape mirrors the same order with tighter proportions.
@@ -203,14 +201,10 @@ private fun PortraitContent(
                 .padding(top = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // TOP: date + day (kept very small)
-            if (settings.clock.showDate || settings.clock.showDay) {
-                DateView(nowMillis = now, settings = settings.clock)
-            }
-
             Spacer(Modifier.weight(1f))
 
-            // CENTRE: icons above the clock, then the clock itself.
+            // CENTRE: icons above the clock, then the time, then the date
+            // beneath it (time first, date second).
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.graphicsLayer {
@@ -238,6 +232,14 @@ private fun PortraitContent(
                     reduceAnimations = settings.performance.reduceAnimations ||
                         settings.performance.batterySaver,
                 )
+
+                if (settings.clock.showDate || settings.clock.showDay) {
+                    DateView(
+                        nowMillis = now,
+                        settings = settings.clock,
+                        modifier = Modifier.padding(top = 12.dp),
+                    )
+                }
             }
 
             Spacer(Modifier.weight(1f))
@@ -274,17 +276,7 @@ private fun LandscapeContent(
                 .padding(horizontal = 24.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Left: date + day
-            Column(
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier.width(180.dp),
-            ) {
-                if (settings.clock.showDate || settings.clock.showDay) {
-                    DateView(nowMillis = now, settings = settings.clock)
-                }
-            }
-
-            // Centre: clock, floating in the middle of the row.
+            // Centre: the time, with the date beneath it.
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
@@ -315,11 +307,16 @@ private fun LandscapeContent(
                         reduceAnimations = settings.performance.reduceAnimations ||
                             settings.performance.batterySaver,
                     )
+
+                    if (settings.clock.showDate || settings.clock.showDay) {
+                        DateView(
+                            nowMillis = now,
+                            settings = settings.clock,
+                            modifier = Modifier.padding(top = 8.dp),
+                        )
+                    }
                 }
             }
-
-            // Right: breathing room so the clock never clips.
-            Spacer(Modifier.width(180.dp))
         }
 
         SettingsButton(

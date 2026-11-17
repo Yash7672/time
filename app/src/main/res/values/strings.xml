@@ -22,5 +22,4 @@
     <string name="privacy_text">CHRONOS has no account, no analytics, no advertising and no internet permission. Notification content stays on this device in memory only and is never uploaded or written to disk.</string>
 
     <string name="notification_access_rationale">To show app icons of your notifications, CHRONOS needs notification access. Android delivers this access only after you approve CHRONOS on the system screen that opens next. CHRONOS reads notification metadata on-device only.</string>
-    <string name="overlay_rationale">The floating clock needs the "display over other apps" special access. Android requires you to approve it on the system screen that opens next. You can revoke it at any time.</string>
 </resources>
