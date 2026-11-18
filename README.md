@@ -67,7 +67,10 @@ All three keep clock accuracy independent of visual effects.
   Tap an icon to open that app beside CHRONOS in **multi-window (split
   screen)**; long-press dismisses the notification.
 - Access is requested **only** when you enable the feature, via Android's own
-  consent screen. CHRONOS cannot and does not grant itself access.
+  consent screen. CHRONOS cannot and does not grant itself access. Until it
+  is granted, the home screen shows a dim "Allow notification access" prompt
+  at the bottom centre; tapping it opens the consent screen, and the feature
+  switches on automatically as soon as the grant exists.
 - Notification content lives in **process memory only** — never written to disk,
   never uploaded (the APK declares **no internet permission**), cleared on exit.
 - Deduplicated by Android key, group summaries collapsed into children, bounded

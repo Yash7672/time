@@ -4,6 +4,10 @@ import android.app.Application
 import com.chronos.clock.data.repository.SettingsRepositoryImpl
 import com.chronos.clock.notifications.NotificationManager
 import com.chronos.clock.notifications.NotificationRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 /**
  * Process-wide service locator.
@@ -34,4 +38,17 @@ class AppContainer(context: ChronosApp) {
 
     /** System-aligned, lifecycle-aware clock ticker. */
     val clockTicker = com.chronos.clock.core.lifecycle.ClockTicker()
+
+    init {
+        // Single source of truth: mirror the persisted notification
+        // preferences into the in-memory store from the very first DataStore
+        // emission. Without this the store keeps its own defaults
+        // (integration OFF) after every process restart, so the icon row
+        // stayed empty even with notification access granted.
+        CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
+            settings.settings.collect { s ->
+                notificationStore.updateSettings(s.notifications)
+            }
+        }
+    }
 }

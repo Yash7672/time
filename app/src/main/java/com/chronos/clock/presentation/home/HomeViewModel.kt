@@ -61,8 +61,24 @@ class HomeViewModel(
     private val _notificationAccess = MutableStateFlow(notifications.hasAccess())
     val notificationAccess: StateFlow<Boolean> = _notificationAccess
 
+    /**
+     * Grant-edge tracker. Starts `false` so the first refresh of a process
+     * counts as an edge: if notification access is already granted (or was
+     * just granted), integration is switched on once so the icon row works
+     * immediately. After that first edge the user's own choice sticks —
+     * turning integration off is never fought while the process lives.
+     */
+    private var hadNotificationAccess: Boolean = false
+
     fun refreshNotificationAccess() {
-        _notificationAccess.value = notifications.hasAccess()
+        val granted = notifications.hasAccess()
+        _notificationAccess.value = granted
+        if (granted && !hadNotificationAccess && !settings.value.notifications.integrationEnabled) {
+            updateSettings {
+                it.copy(notifications = it.notifications.copy(integrationEnabled = true))
+            }
+        }
+        hadNotificationAccess = granted
     }
 
     /**

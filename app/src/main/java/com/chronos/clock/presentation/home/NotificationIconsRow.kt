@@ -3,6 +3,7 @@ package com.chronos.clock.presentation.home
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -200,4 +201,40 @@ fun SectionDivider(modifier: Modifier = Modifier) {
             .height(1.dp)
             .background(palette.surface.copy(alpha = 0.6f)),
     )
+}
+
+/**
+ * Bottom-centre prompt shown while notification access is missing — the
+ * only state in which app icons can never appear. Tapping it opens
+ * Android's own consent screen; the grant itself always happens there,
+ * never inside CHRONOS.
+ */
+@Composable
+fun NotificationAccessHint(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val palette = Chronos.palette
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 32.dp, vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = "Allow notification access",
+            color = palette.textSecondary,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = "so app icons appear here when messages arrive",
+            color = palette.textFaint,
+            fontSize = 11.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 2.dp),
+        )
+    }
 }

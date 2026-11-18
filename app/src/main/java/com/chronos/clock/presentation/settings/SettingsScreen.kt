@@ -53,15 +53,9 @@ fun SettingsScreen(
 
     // Poll listener access while this screen is visible so the master switch
     // reflects a grant made on the system screen (user returns here after).
+    // The grant-edge auto-enable itself lives in refreshNotificationAccess().
     LaunchedEffect(Unit) {
-        viewModel.notificationAccessTicker.collectLatest { granted ->
-            if (granted && !settings.notifications.integrationEnabled) {
-                viewModel.updateSettings {
-                    it.copy(
-                        notifications = it.notifications.copy(integrationEnabled = true),
-                    )
-                }
-            }
+        viewModel.notificationAccessTicker.collectLatest {
             viewModel.refreshNotificationAccess()
         }
     }
