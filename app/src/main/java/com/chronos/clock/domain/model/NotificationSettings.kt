@@ -6,8 +6,12 @@ package com.chronos.clock.domain.model
  * Notification content is never persisted — this only records preferences.
  */
 data class NotificationSettings(
-    /** Master switch; enabling it prompts for notification-listener access. */
-    val integrationEnabled: Boolean = false,
+    /**
+     * Master switch; ON by default so icons work the moment notification
+     * access exists. Enabling (or re-enabling) prompts for notification-
+     * listener access — the one consent Android never lets an app self-grant.
+     */
+    val integrationEnabled: Boolean = true,
     /** Empty = all apps. Otherwise only these packages are surfaced. */
     val allowedPackages: Set<String> = emptySet(),
     val showAppIcons: Boolean = true,

@@ -53,27 +53,37 @@ fun NotificationSettingsSection(
 
     SwitchRow(
         title = "Notification integration",
-        checked = settings.integrationEnabled,
+        // Lit only when the feature can actually work: intent AND grant.
+        checked = settings.integrationEnabled && accessGranted,
         onCheckedChange = { enable ->
             if (enable && !accessGranted) {
-                // Open the system consent screen; the toggle flips once the
-                // user returns with access granted (observed by SettingsScreen).
+                // Open the system consent screen; the switch lights up once
+                // the user returns with access granted (observed here and on
+                // the home screen). The intent itself stays ON — this setting
+                // now defaults to allowed.
                 runCatching {
                     context.startActivity(
                         Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                     )
                 }
-                onChange(settings.copy(integrationEnabled = false))
+                onChange(settings.copy(integrationEnabled = true))
             } else {
                 onChange(settings.copy(integrationEnabled = enable))
             }
         },
-        description = if (accessGranted && settings.integrationEnabled) {
-            "Active — showing ${if (settings.showAppIcons) "app icons" else "nothing yet"} " +
-                "for your notifications."
-        } else {
-            "Off. Tap to open Android's notification-access screen."
+        description = when {
+            accessGranted && settings.integrationEnabled -> {
+                "Active — showing ${if (settings.showAppIcons) "app icons" else "nothing yet"} " +
+                    "for your notifications."
+            }
+            accessGranted -> {
+                "Off. Turn on to show app icons when notifications arrive."
+            }
+            else -> {
+                "Tap to open Android's notification-access screen and allow " +
+                    "CHRONOS — icons appear at the bottom centre automatically."
+            }
         },
     )
 

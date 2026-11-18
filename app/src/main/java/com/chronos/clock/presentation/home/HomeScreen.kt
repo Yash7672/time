@@ -77,6 +77,7 @@ fun HomeScreen(
     val now by viewModel.now.collectAsStateWithLifecycle()
     val groups by viewModel.notificationGroups.collectAsStateWithLifecycle()
     val accessGranted by viewModel.notificationAccess.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     val lifecycleOwner = LocalLifecycleOwner.current
     val configuration = LocalConfiguration.current
@@ -93,6 +94,18 @@ fun HomeScreen(
                 viewModel.refreshNotificationAccess()
                 delay(3_000)
             }
+        }
+    }
+
+    // ---- one-time guided grant -------------------------------------------
+    // First launch without access: jump straight to Android's consent screen
+    // so the single required allowance is one switch flip. Runs at most once
+    // per install; if declined, the bottom-centre hint stays as the manual
+    // path. Integration itself is ON by default — nothing else to enable.
+    LaunchedEffect(Unit) {
+        if (!accessGranted && PermissionHelper.consumeFirstConsentPrompt(context)) {
+            delay(700) // let the clock render first — no abrupt jump
+            openNotificationAccess(context)
         }
     }
 

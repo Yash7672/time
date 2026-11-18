@@ -19,4 +19,20 @@ object PermissionHelper {
     /** System screen where the user grants notification access. */
     fun notificationAccessIntent(): Intent =
         Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+
+    private const val PREFS = "chronos_permissions"
+    private const val KEY_CONSENT_AUTO_SHOWN = "consent_auto_shown"
+
+    /**
+     * Exactly-once gate for the guided first grant: returns `true` only the
+     * first time it is called (and records the call), so the app can jump
+     * straight to Android's consent screen on first launch without ever
+     * repeating that detour if the user declines.
+     */
+    fun consumeFirstConsentPrompt(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        if (prefs.getBoolean(KEY_CONSENT_AUTO_SHOWN, false)) return false
+        prefs.edit().putBoolean(KEY_CONSENT_AUTO_SHOWN, true).apply()
+        return true
+    }
 }

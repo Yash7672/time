@@ -65,12 +65,13 @@ All three keep clock accuracy independent of visual effects.
 - Optional **notification-listener** integration: shows one original app icon
   per app along the bottom of the clock screen with an unread dot/count.
   Tap an icon to open that app beside CHRONOS in **multi-window (split
-  screen)**; long-press dismisses the notification.
-- Access is requested **only** when you enable the feature, via Android's own
-  consent screen. CHRONOS cannot and does not grant itself access. Until it
-  is granted, the home screen shows a dim "Allow notification access" prompt
-  at the bottom centre; tapping it opens the consent screen, and the feature
-  switches on automatically as soon as the grant exists.
+  screen)**; long-press dismisses the notification. The integration setting
+  itself is **on by default** — the only thing Android requires is the
+  notification-access grant, which CHRONOS can never give itself.
+- Access is requested **only** via Android's own consent screen — CHRONOS
+  cannot and does not grant itself access. On the very first launch it opens
+  that screen once (one switch flip), and the bottom-centre prompt reopens it
+  any time the grant is missing; the feature then switches on automatically.
 - Notification content lives in **process memory only** — never written to disk,
   never uploaded (the APK declares **no internet permission**), cleared on exit.
 - Deduplicated by Android key, group summaries collapsed into children, bounded
