@@ -61,8 +61,8 @@ class StarField(
             val count = base.coerceIn(1, maxParticles.coerceAtLeast(1))
             val rng = Random(seed)
             val speedScale = when (speed) {
-                StarSpeed.SLOW -> 0.0045f // full screen ≈ 3.7 minutes
-                StarSpeed.NORMAL -> 0.012f
+                StarSpeed.SLOW -> 0.007f // full screen pass ≈ 2.4 minutes
+                StarSpeed.NORMAL -> 0.02f // full screen pass ≈ 50 seconds
             }
 
             val xs = FloatArray(count)

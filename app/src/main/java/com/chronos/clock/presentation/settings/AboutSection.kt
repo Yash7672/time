@@ -66,10 +66,11 @@ fun AboutSection(versionName: String) {
 
     SectionHeader("Known Android limitations")
     NoteText(
-        "• Floating windows: whether WhatsApp (or any app) appears as a bubble " +
-            "or floating window is controlled by Android and by that app. " +
-            "CHRONOS can only forward the notification's own bubble/content " +
-            "intent — it cannot force a third-party app into a floating window.\n" +
+        "• Split screen: tapping an app icon asks Android to open that app " +
+            "beside CHRONOS in multi-window. Whether it truly splits is " +
+            "decided by the device and that app's own resize support — " +
+            "otherwise it opens normally, and Back inside it closes it " +
+            "again.\n" +
             "• Notification icons: Android does not allow one app to recolour " +
             "or replace another app's notification icon. CHRONOS always shows " +
             "the original application icon.\n" +

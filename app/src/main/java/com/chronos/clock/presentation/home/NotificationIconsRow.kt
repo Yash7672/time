@@ -40,12 +40,14 @@ import com.chronos.clock.domain.model.NotificationSettings
 import com.chronos.clock.presentation.theme.Chronos
 
 /**
- * Notification app icons arranged around the centre.
+ * Notification app icons shown along the bottom of the clock screen.
  *
  * - Original source-app icons only (Android forbids recolouring another
  *   app's notification icon; CHRONOS never tries).
  * - One icon per app with an unread count indicator — this keeps multiple
  *   notifications organised and guarantees no overlap with the clock.
+ * - Tap opens the app beside CHRONOS in multi-window (split screen);
+ *   long-press dismisses that notification.
  * - Bounded to [AppConstants.MAX_VISIBLE_ICONS] entries plus a "+N" chip.
  * - AMOLED friendly: dim circular backdrops, no bright surfaces.
  */

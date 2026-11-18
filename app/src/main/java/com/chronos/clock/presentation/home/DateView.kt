@@ -17,8 +17,8 @@ import com.chronos.clock.presentation.theme.Chronos
 import java.util.Locale
 
 /**
- * Compact date + day-of-week header. Deliberately small and dim: it is
- * supporting information, the clock is the focus.
+ * Date + day-of-week block shown directly beneath the clock. Secondary to
+ * the time but sized to stay clearly readable at a glance.
  */
 @Composable
 fun DateView(
@@ -38,11 +38,11 @@ fun DateView(
             Text(
                 text = TimeUtils.formatDate(nowMillis, locale = locale),
                 style = TextStyle(
-                    fontSize = 13.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Medium,
-                    letterSpacing = 1.4.sp,
+                    letterSpacing = 1.6.sp,
                 ),
-                color = palette.textSecondary.copy(alpha = 0.85f),
+                color = palette.textSecondary.copy(alpha = 0.9f),
                 maxLines = 1,
             )
         }
@@ -51,9 +51,9 @@ fun DateView(
                 text = TimeUtils.formatDay(nowMillis, locale = locale)
                     .uppercase(locale),
                 style = TextStyle(
-                    fontSize = 11.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Normal,
-                    letterSpacing = 2.2.sp,
+                    letterSpacing = 2.4.sp,
                 ),
                 color = palette.textFaint,
                 maxLines = 1,

@@ -5,8 +5,12 @@ data class PerformanceSettings(
     val batteryFriendly: Boolean = false,
     /** Disables non-essential UI motion (fades, colon pulse, drift). */
     val reduceAnimations: Boolean = false,
-    /** Pause background effects after a period of inactivity. */
-    val pauseWhenInactive: Boolean = true,
+    /**
+     * Pause the star field after a period of inactivity. Off by default so
+     * the sky keeps drifting the whole time CHRONOS is open; the field always
+     * stops anyway when the app is no longer visible.
+     */
+    val pauseWhenInactive: Boolean = false,
     /** Caps particles to the lowest preset and skips per-frame work. */
     val lightweightRender: Boolean = false,
     /**

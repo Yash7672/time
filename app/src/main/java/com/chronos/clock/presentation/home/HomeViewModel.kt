@@ -118,6 +118,11 @@ class HomeViewModel(
         notifications.open(group.latest, settings.value.notifications.bubblesEnabled)
     }
 
+    /** Opens the app in a multi-window (split-screen) window beside CHRONOS. */
+    fun openAppMultiWindow(group: NotificationGroup) {
+        notifications.openInMultiWindow(group.latest)
+    }
+
     fun dismissNotification(group: NotificationGroup) {
         notifications.dismiss(group.latest)
     }

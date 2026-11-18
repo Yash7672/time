@@ -33,6 +33,25 @@ enum class ChronosTheme(val label: String) {
     LIGHT("Light"),
 }
 
+/**
+ * Optional clock digit colour the user can pick independently of the
+ * background theme. `DEFAULT` keeps the theme palette's own text colour.
+ * ARGB values are chosen to stay legible on the near-black backgrounds
+ * without being full-intensity white.
+ */
+enum class ClockColor(val label: String, val argb: Long?) {
+    DEFAULT("Theme", null),
+    WHITE("White", 0xFFF4F6FB),
+    ICE("Ice", 0xFFBFE9FF),
+    CYAN("Cyan", 0xFF66E0FF),
+    BLUE("Blue", 0xFF7FB2FF),
+    MINT("Mint", 0xFF8BE7B0),
+    AMBER("Amber", 0xFFFFC46B),
+    ORANGE("Orange", 0xFFFF9E5E),
+    ROSE("Rose", 0xFFFF9EC7),
+    VIOLET("Violet", 0xFFC6A8FF),
+}
+
 data class ThemeSettings(
     val theme: ChronosTheme = ChronosTheme.AMOLED_BLACK,
     val amoledMode: AmoledMode = AmoledMode.SPACE_AMOLED,
@@ -48,4 +67,6 @@ data class ThemeSettings(
      * never writes system brightness. -1 = follow the system.
      */
     val windowBrightness: Float = -1f,
+    /** User-chosen colour for the clock digits; DEFAULT follows the theme. */
+    val clockColor: ClockColor = ClockColor.DEFAULT,
 )

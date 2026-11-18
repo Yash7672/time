@@ -25,7 +25,7 @@ There are no third-party analytics, SDKs, ads, or trackers in this app.
 | Data | Where it lives | Lifetime | Leaves the device? |
 | ---- | -------------- | -------- | ------------------ |
 | Clock & appearance settings (12/24h, theme, star density, modes) | Android DataStore (app-private storage) | Until you clear app data or uninstall | **No** |
-| Notification **icons and titles** shown around the clock | Device RAM only | Current session; cleared when the app closes or the listener disconnects | **No** |
+| Notification **icons and titles** shown on the clock screen | Device RAM only | Current session; cleared when the app closes or the listener disconnects | **No** |
 
 Notification content is never written to disk, never logged, never uploaded, and never backed up (`android:allowBackup="false"`).
 
@@ -33,7 +33,7 @@ Notification content is never written to disk, never logged, never uploaded, and
 
 The only special permission is **optional and user-granted** through an Android system screen:
 
-- **Notification access (`BIND_NOTIFICATION_LISTENER_SERVICE`)** — optional. Used only to display the small app icons of your notifications around the clock. CHRONOS reads icon/title/package only; it does not read message bodies for storage or transmission, does not dismiss notifications unless you ask it to, and does not persist content.
+- **Notification access (`BIND_NOTIFICATION_LISTENER_SERVICE`)** — optional. Used only to display the small app icons of your notifications on the clock screen. CHRONOS reads icon/title/package only; it does not read message bodies for storage or transmission, does not dismiss notifications unless you ask it to, and does not persist content.
 
 CHRONOS requests **no** camera, microphone, location, contacts, storage, phone, or SMS permissions, **no** overlay (`SYSTEM_ALERT_WINDOW`), **no** foreground-service or post-notification permissions, and **no** internet permission.
 

@@ -47,6 +47,8 @@ fun ClockView(
     minimal: Boolean,
     reduceAnimations: Boolean,
     modifier: Modifier = Modifier,
+    /** User-picked digit colour; null = the theme palette's text colour. */
+    clockColor: androidx.compose.ui.graphics.Color? = null,
 ) {
     val palette = Chronos.palette
     val configuration = LocalConfiguration.current
@@ -80,8 +82,11 @@ fun ClockView(
             letterSpacing = if (minimal) 2.sp else 0.sp,
         )
 
-        val color = palette.textPrimary.copy(alpha = settings.brightness.coerceIn(0.35f, 1f))
-        val colonColor = palette.textFaint.copy(alpha = settings.brightness.coerceIn(0.35f, 1f))
+        val digitBase = clockColor ?: palette.textPrimary
+        val color = digitBase.copy(alpha = settings.brightness.coerceIn(0.35f, 1f))
+        // Colon: dimmer companion of the digit colour (theme faint by default).
+        val colonBase = clockColor ?: palette.textFaint
+        val colonColor = colonBase.copy(alpha = settings.brightness.coerceIn(0.35f, 1f))
 
         if (settings.meridiemShown) {
             Row(verticalAlignment = Alignment.CenterVertically) {

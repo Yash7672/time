@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Switch
@@ -82,7 +83,10 @@ fun SwitchRow(
 /**
  * Single-choice row group rendered as a wrapping set of text "chips"
  * (plain text + selection colour — no bright filled surfaces on AMOLED).
+ * Chips wrap onto new lines so long option sets (theme, privacy) never
+ * overflow the screen edge.
  */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun <T> OptionRow(
     title: String,
@@ -97,7 +101,7 @@ fun <T> OptionRow(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 10.dp),
+            .padding(horizontal = 20.dp, vertical = 12.dp),
     ) {
         Text(
             text = title,
@@ -112,9 +116,12 @@ fun <T> OptionRow(
                 modifier = Modifier.padding(top = 3.dp, bottom = 6.dp),
             )
         } else {
-            Spacer(Modifier.padding(top = 4.dp))
+            Spacer(Modifier.height(6.dp))
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        androidx.compose.foundation.layout.FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
             options.forEach { option ->
                 val isSelected = option == selected
                 Text(

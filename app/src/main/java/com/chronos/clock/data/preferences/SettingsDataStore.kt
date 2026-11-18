@@ -12,6 +12,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.chronos.clock.domain.model.AmoledMode
 import com.chronos.clock.domain.model.AppSettings
 import com.chronos.clock.domain.model.ChronosTheme
+import com.chronos.clock.domain.model.ClockColor
 import com.chronos.clock.domain.model.ClockSettings
 import com.chronos.clock.domain.model.DisplaySettings
 import com.chronos.clock.domain.model.NotificationPrivacy
@@ -51,6 +52,7 @@ class SettingsDataStore(
         val BURN_IN = booleanPreferencesKey("burn_in_protection")
         val MINIMAL_CLOCK = booleanPreferencesKey("minimal_clock_mode")
         val WINDOW_BRIGHTNESS = floatPreferencesKey("window_brightness")
+        val CLOCK_COLOR = stringPreferencesKey("clock_color")
 
         val STARS_ENABLED = booleanPreferencesKey("stars_enabled")
         val STARS_DENSITY = stringPreferencesKey("stars_density")
@@ -126,6 +128,11 @@ class SettingsDataStore(
                     minimalClockMode = bool(Keys.MINIMAL_CLOCK, defaults.theme.minimalClockMode),
                     windowBrightness = float(Keys.WINDOW_BRIGHTNESS, defaults.theme.windowBrightness)
                         .let { if (it in 0.1f..1f) it else -1f },
+                    clockColor = enum(
+                        Keys.CLOCK_COLOR,
+                        ClockColor.entries.toTypedArray(),
+                        defaults.theme.clockColor,
+                    ),
                 ),
                 stars = StarSettings(
                     enabled = bool(Keys.STARS_ENABLED, defaults.stars.enabled),
@@ -197,6 +204,7 @@ class SettingsDataStore(
             putBool(Keys.BURN_IN, t.burnInProtection, nt.burnInProtection)
             putBool(Keys.MINIMAL_CLOCK, t.minimalClockMode, nt.minimalClockMode)
             putFloat(Keys.WINDOW_BRIGHTNESS, t.windowBrightness, nt.windowBrightness)
+            putEnum(Keys.CLOCK_COLOR, t.clockColor, nt.clockColor)
 
             val s = current.stars
             val ns = next.stars

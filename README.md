@@ -54,7 +54,8 @@ All three keep clock accuracy independent of visual effects.
 - **No background service for the clock**, no wake lock, no WorkManager
   polling, no location, no network — the clock only ticks while visible.
 - Star animation pauses when the app isn't visible (`repeatOnLifecycle`) and
-  after 30 s of inactivity (resumes instantly on touch).
+  optionally after 30 s of inactivity (off by default — the sky keeps drifting,
+  resumes instantly on touch).
 - Static modes draw **exactly one frame** — no frame loop at all.
 - No allocations in the draw loop: particles are precomputed per settings change.
 - `android:keepScreenOn` is **off by default** — no unnecessary screen wake-ups.
@@ -62,7 +63,9 @@ All three keep clock accuracy independent of visual effects.
 
 ### Smart notifications (privacy-first)
 - Optional **notification-listener** integration: shows one original app icon
-  per app around the clock with an unread dot/count.
+  per app along the bottom of the clock screen with an unread dot/count.
+  Tap an icon to open that app beside CHRONOS in **multi-window (split
+  screen)**; long-press dismisses the notification.
 - Access is requested **only** when you enable the feature, via Android's own
   consent screen. CHRONOS cannot and does not grant itself access.
 - Notification content lives in **process memory only** — never written to disk,
@@ -76,13 +79,13 @@ All three keep clock accuracy independent of visual effects.
 
 ### Settings (persisted with Jetpack DataStore)
 1. **Clock** — format, seconds, date, day, size, brightness
-2. **Appearance** — 6 themes (incl. Light), the 3 AMOLED modes, burn-in drift,
-   minimal clock, window brightness
+2. **Appearance** — 6 themes (incl. Light), clock digit colour, the 3 AMOLED
+   modes, burn-in drift, minimal clock, window brightness
 3. **Star background** — enable, density (Low/Med/High), speed, twinkle
 4. **Notifications** — access toggle, app selection, icons, indicators,
    privacy mode, quick reply, bubbles
 5. **Display** — auto brightness (light sensor), keep-awake, fullscreen
-6. **Performance** — battery saver (star throttling, inactivity pausing and
+6. **Performance** — battery saver, pause stars when idle (star throttling and
    low-fps rendering are automatic)
 7. **About** — version, privacy statement, licences, GitHub link, known
    Android limitations

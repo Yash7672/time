@@ -2,6 +2,7 @@ package com.chronos.clock.notifications
 
 import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import com.chronos.clock.domain.model.NotificationItem
 import com.chronos.clock.domain.model.NotificationSettings
 
@@ -62,6 +63,41 @@ class NotificationManager(
         } catch (_: Exception) {
             false
         }
+    }
+
+    /**
+     * Opens the source app in multi-window (split screen) beside CHRONOS.
+     *
+     * [Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT] asks Android to give the app its
+     * own window area next to CHRONOS; the screen splits so both stay usable.
+     * Devices or apps without multi-window support simply fall back to a
+     * normal full launch — never a crash. Pressing Back inside that window
+     * closes it again and CHRONOS takes the whole screen back.
+     */
+    fun openInMultiWindow(item: NotificationItem): Boolean {
+        val launch = try {
+            appContext.packageManager.getLaunchIntentForPackage(item.packageName)
+        } catch (_: Exception) {
+            null
+        }
+        if (launch != null) {
+            launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT)
+            return try {
+                appContext.startActivity(launch)
+                true
+            } catch (_: Exception) {
+                // Split refused by the system: retry once as a plain launch.
+                try {
+                    launch.flags = launch.flags and Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT.inv()
+                    appContext.startActivity(launch)
+                    true
+                } catch (_: Exception) {
+                    false
+                }
+            }
+        }
+        // No launcher entry (rare): fall back to the notification's own handle.
+        return open(item, useBubbles = false)
     }
 
     /** Dismiss through the listener service; only possible with granted access. */

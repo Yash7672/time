@@ -49,10 +49,20 @@ fun PerformanceSettingsSection(
             "Clock accuracy is unaffected.",
     )
 
+    SwitchRow(
+        title = "Pause stars when idle",
+        checked = settings.pauseWhenInactive,
+        onCheckedChange = { onChange(settings.copy(pauseWhenInactive = it)) },
+        description = "Freezes the star field 30 s after your last touch so " +
+            "a clock left on the desk sips power; the next tap resumes it. " +
+            "Off by default so the sky keeps drifting. The clock itself " +
+            "never pauses.",
+    )
+
     NoteText(
-        "Everything else is automatic: stars throttle to ~15 fps, freeze " +
-            "after 30 s of no touch, and stop entirely when CHRONOS is not " +
-            "visible. The clock runs no background service, holds no wake " +
-            "lock, uses no WorkManager, no location and no network.",
+        "Everything else is automatic: stars throttle to ~15 fps and stop " +
+            "entirely when CHRONOS is not visible. The clock runs no " +
+            "background service, holds no wake lock, uses no WorkManager, " +
+            "no location and no network.",
     )
 }

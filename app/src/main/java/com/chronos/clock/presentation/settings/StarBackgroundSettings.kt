@@ -43,8 +43,8 @@ fun StarBackgroundSettingsSection(
             selected = settings.speed,
             optionLabel = { it.label },
             onSelect = { onChange(settings.copy(speed = it)) },
-            description = "Drift is intentionally slow — a full screen pass " +
-                "takes minutes, not seconds.",
+            description = "Slow ≈ one gentle screen pass every few minutes, " +
+                "Normal ≈ about a minute. Both stay subtle enough to read by.",
         )
 
         SwitchRow(

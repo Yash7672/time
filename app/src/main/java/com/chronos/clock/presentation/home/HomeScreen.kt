@@ -25,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -47,8 +48,10 @@ import kotlinx.coroutines.delay
  * Main clock screen.
  *
  * Layout contract (portrait):
- *   centre   → notification icons, then the clock (time), then the date
- *              beneath it — time first, date second, never overlapping
+ *   centre   → the clock (time), then the date beneath it — time first,
+ *              date second, never overlapping
+ *   bottom   → notification app icons (tap = open that app beside CHRONOS
+ *              in multi-window, long-press = dismiss the notification)
  *   bottom-L → settings gear (tap-to-reveal, auto-hide)
  *
  * Landscape mirrors the same order with tighter proportions.
@@ -203,8 +206,8 @@ private fun PortraitContent(
         ) {
             Spacer(Modifier.weight(1f))
 
-            // CENTRE: icons above the clock, then the time, then the date
-            // beneath it (time first, date second).
+            // CENTRE: the time, then the date beneath it (time first,
+            // date second).
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.graphicsLayer {
@@ -212,15 +215,6 @@ private fun PortraitContent(
                     translationY = drift.y * density
                 },
             ) {
-                NotificationIconsRow(
-                    groups = groups,
-                    settings = settings.notifications,
-                    loadIcon = { viewModel.loadIcon(it)?.asImageBitmap() },
-                    onOpen = { viewModel.openNotification(it) },
-                    onDismiss = { viewModel.dismissNotification(it) },
-                    modifier = Modifier.padding(bottom = 20.dp),
-                )
-
                 ClockView(
                     time = com.chronos.clock.core.utils.TimeUtils.formatClock(
                         epochMillis = now,
@@ -231,6 +225,7 @@ private fun PortraitContent(
                     minimal = settings.theme.minimalClockMode,
                     reduceAnimations = settings.performance.reduceAnimations ||
                         settings.performance.batterySaver,
+                    clockColor = settings.theme.clockColor.argb?.let { Color(it) },
                 )
 
                 if (settings.clock.showDate || settings.clock.showDay) {
@@ -243,6 +238,17 @@ private fun PortraitContent(
             }
 
             Spacer(Modifier.weight(1f))
+
+            // BOTTOM: notification app icons — tap opens the app beside
+            // CHRONOS in multi-window, long-press dismisses.
+            NotificationIconsRow(
+                groups = groups,
+                settings = settings.notifications,
+                loadIcon = { viewModel.loadIcon(it)?.asImageBitmap() },
+                onOpen = { viewModel.openAppMultiWindow(it) },
+                onDismiss = { viewModel.dismissNotification(it) },
+                modifier = Modifier.padding(bottom = 6.dp),
+            )
 
             Spacer(Modifier.height(56.dp)) // reserved lane for the gear
         }
@@ -287,15 +293,6 @@ private fun LandscapeContent(
                     },
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    NotificationIconsRow(
-                        groups = groups,
-                        settings = settings.notifications,
-                        loadIcon = { viewModel.loadIcon(it)?.asImageBitmap() },
-                        onOpen = { viewModel.openNotification(it) },
-                        onDismiss = { viewModel.dismissNotification(it) },
-                        modifier = Modifier.padding(bottom = 14.dp),
-                    )
-
                     ClockView(
                         time = com.chronos.clock.core.utils.TimeUtils.formatClock(
                             epochMillis = now,
@@ -306,6 +303,7 @@ private fun LandscapeContent(
                         minimal = settings.theme.minimalClockMode,
                         reduceAnimations = settings.performance.reduceAnimations ||
                             settings.performance.batterySaver,
+                        clockColor = settings.theme.clockColor.argb?.let { Color(it) },
                     )
 
                     if (settings.clock.showDate || settings.clock.showDay) {
@@ -315,6 +313,16 @@ private fun LandscapeContent(
                             modifier = Modifier.padding(top = 8.dp),
                         )
                     }
+
+                    // BOTTOM of the centre block: notification app icons.
+                    NotificationIconsRow(
+                        groups = groups,
+                        settings = settings.notifications,
+                        loadIcon = { viewModel.loadIcon(it)?.asImageBitmap() },
+                        onOpen = { viewModel.openAppMultiWindow(it) },
+                        onDismiss = { viewModel.dismissNotification(it) },
+                        modifier = Modifier.padding(top = 12.dp),
+                    )
                 }
             }
         }

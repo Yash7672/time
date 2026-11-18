@@ -15,7 +15,7 @@ data class StarSettings(
     /** Master switch for the star field (off = static pure black background). */
     val enabled: Boolean = true,
     val density: StarDensity = StarDensity.MEDIUM,
-    val speed: StarSpeed = StarSpeed.SLOW,
+    val speed: StarSpeed = StarSpeed.NORMAL,
     val twinkling: Boolean = true,
 ) {
     /**

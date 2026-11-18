@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.chronos.clock.presentation.home.HomeViewModel
+import com.chronos.clock.presentation.home.SectionDivider
 import com.chronos.clock.presentation.theme.Chronos
 import kotlinx.coroutines.flow.collectLatest
 
@@ -133,9 +134,13 @@ fun SettingsScreen(
                     viewModel.updateSettings { it.copy(clock = newClock) }
                 }
 
+                SectionDivider()
+
                 AppearanceSettingsSection(settings = settings.theme) { newTheme ->
                     viewModel.updateSettings { it.copy(theme = newTheme) }
                 }
+
+                SectionDivider()
 
                 StarBackgroundSettingsSection(
                     settings = settings.stars,
@@ -143,6 +148,8 @@ fun SettingsScreen(
                 ) { newStars ->
                     viewModel.updateSettings { it.copy(stars = newStars) }
                 }
+
+                SectionDivider()
 
                 NotificationSettingsSection(
                     settings = settings.notifications,
@@ -154,13 +161,19 @@ fun SettingsScreen(
                     onOpenAppPicker = { showAppPicker = true },
                 )
 
+                SectionDivider()
+
                 DisplaySettingsSection(settings = settings) { newSettings ->
                     viewModel.updateSettings { newSettings }
                 }
 
+                SectionDivider()
+
                 PerformanceSettingsSection(settings = settings.performance) { newPerf ->
                     viewModel.updateSettings { it.copy(performance = newPerf) }
                 }
+
+                SectionDivider()
 
                 AboutSection(versionName = versionName)
 
