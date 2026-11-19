@@ -119,6 +119,27 @@ class NotificationReducerTest {
     }
 
     @Test
+    fun `group keeps its unseen messages newest first without summaries`() {
+        val items = listOf(
+            item("w1", pkg = "com.whatsapp", postTime = 100),
+            item("w2", pkg = "com.whatsapp", postTime = 300),
+            item("w3", pkg = "com.whatsapp", postTime = 200),
+            item("sum", pkg = "com.whatsapp", postTime = 999, summary = true),
+        )
+
+        val wa = NotificationReducer.group(items)
+            .first { it.packageName == "com.whatsapp" }
+
+        // The reply sheet's source: every active message of the app,
+        // newest first, summaries collapsed away.
+        assertEquals(3, wa.items.size)
+        assertEquals(listOf(300L, 200L, 100L), wa.items.map { it.postTime })
+        assertTrue(wa.items.none { it.isGroupSummary })
+        // latest is simply the head of the same list.
+        assertEquals(wa.latest, wa.items.first())
+    }
+
+    @Test
     fun `default privacy hides titles`() {
         assertEquals(NotificationPrivacy.ICONS_ONLY, NotificationSettings().privacy)
     }

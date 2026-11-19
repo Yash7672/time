@@ -37,4 +37,10 @@ data class NotificationGroup(
     val appLabel: String,
     val count: Int,
     val latest: NotificationItem,
+    /**
+     * Every active (unseen) non-summary notification of this app, newest
+     * first — what the quick-reply sheet shows as "last unseen messages".
+     * Memory only, exactly like [latest]; vanishes with the notification.
+     */
+    val items: List<NotificationItem> = emptyList(),
 )

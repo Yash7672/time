@@ -63,6 +63,9 @@ object NotificationReducer {
                     appLabel = sorted.first().appLabel,
                     count = list.size,
                     latest = sorted.first(),
+                    // The app's full set of active (unseen) messages,
+                    // newest first — reply sheet context.
+                    items = sorted,
                 )
             }
             .sortedByDescending { it.latest.postTime }

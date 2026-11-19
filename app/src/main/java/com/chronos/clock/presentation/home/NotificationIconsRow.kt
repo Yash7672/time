@@ -15,8 +15,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
@@ -34,10 +36,14 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -55,7 +61,8 @@ import com.chronos.clock.presentation.theme.Chronos
  * - One icon per app with an unread count indicator — this keeps multiple
  *   notifications organised and guarantees no overlap with the clock.
  * - Tap opens the app beside CHRONOS in multi-window (split screen).
- * - Long-press opens the reply dialog when quick reply is on and the
+ * - Long-press opens the reply dialog — which lists the **last unseen
+ *   messages** of that app for context — when quick reply is on and the
  *   notification supports RemoteInput (Dismiss lives in the same dialog);
  *   otherwise long-press dismisses the notification directly.
  * - Bounded to [AppConstants.MAX_VISIBLE_ICONS] entries plus a "+N" chip.
@@ -322,7 +329,9 @@ fun NotificationStatusLine(
 /**
  * AMOLED reply sheet: type and send through the source app's own
  * RemoteInput (the officially supported Android mechanism), dismiss the
- * notification, or cancel. Every colour comes from the palette — no
+ * notification, or cancel. The sheet lists the **last unseen messages** —
+ * every active notification of that app, oldest of the newest few first —
+ * so a reply always has context. Every colour comes from the palette — no
  * default Material surfaces light up the panel.
  */
 @Composable
@@ -342,6 +351,9 @@ private fun ReplyDialog(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp))
                 .background(palette.background)
+                // Scrollable so the message list plus input and buttons
+                // always fit — portrait and landscape alike.
+                .verticalScroll(rememberScrollState())
                 .padding(18.dp),
         ) {
             Text(
@@ -350,31 +362,47 @@ private fun ReplyDialog(
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium,
             )
-            // Show exactly what is being replied to — the latest
-            // notification's sender/title and message body. CHRONOS only
-            // ever knows what the notification carried; it never claims
-            // access to the rest of the conversation.
-            val sender = group.latest.title
-            val message = group.latest.text
-            if (sender != null) {
+            // The last unseen messages: every still-active notification of
+            // this app (memory only — Android drops each one the moment it
+            // is read or dismissed in the source app). Newest few, shown
+            // oldest → newest so the sheet reads like a conversation.
+            // CHRONOS only ever shows what the notifications carried.
+            val unseen = group.items
+                .filter { it.title != null || it.text != null }
+                .take(AppConstants.MAX_REPLY_MESSAGES)
+                .reversed()
+            if (unseen.isNotEmpty()) {
                 Text(
-                    text = "Replying to $sender",
+                    text = "Last unseen messages",
                     color = palette.textSecondary,
-                    fontSize = 12.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 3.dp),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(top = 6.dp),
                 )
-            }
-            if (message != null) {
-                Text(
-                    text = message,
-                    color = palette.textFaint,
-                    fontSize = 12.sp,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 2.dp),
-                )
+                unseen.forEach { msg ->
+                    val sender = msg.title
+                    val body = msg.text
+                    val line: AnnotatedString = when {
+                        sender != null && body != null -> buildAnnotatedString {
+                            withStyle(SpanStyle(color = palette.textSecondary)) {
+                                append(sender)
+                            }
+                            withStyle(SpanStyle(color = palette.textFaint)) {
+                                append(": $body")
+                            }
+                        }
+                        sender != null -> AnnotatedString(sender)
+                        else -> AnnotatedString(body ?: "")
+                    }
+                    Text(
+                        text = line,
+                        color = palette.textFaint,
+                        fontSize = 12.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 3.dp),
+                    )
+                }
             }
 
             OutlinedTextField(

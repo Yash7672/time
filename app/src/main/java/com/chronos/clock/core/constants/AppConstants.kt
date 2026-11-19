@@ -16,6 +16,9 @@ object AppConstants {
     /** Maximum distinct app icons shown around the clock. */
     const val MAX_VISIBLE_ICONS = 8
 
+    /** Maximum unseen messages listed in the quick-reply sheet. */
+    const val MAX_REPLY_MESSAGES = 6
+
     /** Milliseconds of inactivity after which background effects pause. */
     const val INACTIVITY_PAUSE_MS = 30_000L
 
