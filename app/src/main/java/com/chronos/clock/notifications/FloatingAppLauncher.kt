@@ -5,33 +5,43 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.graphics.Rect
+import android.os.Build
 import com.chronos.clock.domain.model.NotificationItem
 import com.chronos.clock.domain.model.NotificationSettings
 
 /**
- * Dedicated launcher that opens other apps on top of CHRONOS using
- * Android's OWN windowing — a real freeform (floating) activity window,
- * split screen, or a normal launch. It never draws a fake window around
- * an icon, never overlays other apps (CHRONOS has no overlay permission),
- * never embeds or controls another app's UI, and never uses accessibility
- * services.
+ * Opens other apps on top of CHRONOS using **public Android APIs only** —
+ * no reflection, no hidden windowing APIs, no accessibility gestures, no
+ * fake windows, no overlay permission.
  *
- * Honest capability model: Android does not let an ordinary third-party
- * app force freeform on every device. Availability depends on the OEM
- * build (`FEATURE_FREEFORM_WINDOW_MANAGEMENT`) and on the target app's
- * resize declaration — both are checked before every attempt, every step
- * degrades to the next, and the caller always learns which strategy won
- * ([LaunchResult.outcome]) and why floating could not engage, if it could
- * not ([LaunchResult.floatBlockReason]).
+ * Capability model (each device class gets its own honest path):
  *
- * The strategy ladder itself is decided by [plan] — a pure function of the
- * settings, unit-tested in `FloatingAppLauncherTest`.
+ *  - **vivo / iQOO (Funtouch OS, OriginOS)** — the native **Small Window**
+ *    feature is the real floating window on these phones (rounded corners,
+ *    title bar with minimize/maximize/close, draggable, resizable, Mini
+ *    Small Window mode). vivo publishes no public intent or API that a
+ *    third-party app can use to launch Small Window directly — their
+ *    developer documentation is an *app adaptation* guide, not a launch
+ *    API. So instead of pretending, [planFor] returns
+ *    [Step.GUIDE_SMALL_WINDOW]: the UI shows the exact Recents workflow
+ *    (Settings → Shortcuts → Small window docs) and only opens the app
+ *    when the user taps "Open app" themselves ([openFromGuide]).
+ *  - **Stock freeform devices** — advertise
+ *    `FEATURE_FREEFORM_WINDOW_MANAGEMENT`; the public
+ *    `ActivityOptions.setLaunchBounds` attempt runs there. Whether the
+ *    OS honours freeform is the OS's decision — CHRONOS never claims a
+ *    floating success it cannot verify.
+ *  - **Everything else** — split screen → full-screen → the source
+ *    notification's own handle, each step degrading to the next.
+ *
+ * The strategy ladder is a pure function of settings × capabilities
+ * ([planFor]), unit-tested in `FloatingAppLauncherTest`.
  */
 class FloatingAppLauncher(private val appContext: Context) {
 
-    /** Which strategy actually opened the app. */
+    /** Which strategy actually opened the app (or what the tap produced). */
     enum class Outcome {
-        /** Opened as a real freeform window floating over CHRONOS. */
+        /** Opened with freeform window bounds (device advertises freeform). */
         FLOATING,
         /** Opened beside CHRONOS in split screen. */
         SPLIT,
@@ -39,88 +49,94 @@ class FloatingAppLauncher(private val appContext: Context) {
         FULL_SCREEN,
         /** Opened through the source notification's own PendingIntent. */
         NOTIFICATION_HANDLE,
+        /** Nothing launched: the guided Small Window walkthrough was shown. */
+        SMALL_WINDOW_GUIDE,
         /** Nothing was launched at all. */
         NONE,
     }
 
-    /** Why a floating window could not be used (drives the user-facing notice). */
+    /** Why the floating-window attempt could not be made. */
     enum class FloatBlockReason {
-        /** The device does not advertise freeform-window support. */
+        /** No standard freeform support on this device. */
         DEVICE_UNSUPPORTED,
-        /** The target app declares itself non-resizable — Android refuses to float it. */
-        TARGET_UNRESIZABLE,
-        /** The system refused the freeform attempt itself. */
+        /** Freeform exists but the system refused the bounded launch. */
         REFUSED,
     }
 
     /** One step of the launch ladder. */
-    enum class Step { FLOAT, SPLIT, FULL_SCREEN, HANDLE }
+    enum class Step { FLOAT, SPLIT, FULL_SCREEN, HANDLE, GUIDE_SMALL_WINDOW }
+
+    /**
+     * Device-side capabilities — pure input to [planFor] so tests can model
+     * any device without a Context or the real Build properties.
+     */
+    data class Capabilities(
+        /** `PackageManager.FEATURE_FREEFORM_WINDOW_MANAGEMENT` present. */
+        val freeform: Boolean,
+        /** vivo/iQOO device shipping the native Small Window feature. */
+        val smallWindow: Boolean,
+    )
 
     /** Result of one icon tap. */
     data class LaunchResult(
         val outcome: Outcome,
-        /** Non-null when floating was wanted but could not engage. */
+        /** Non-null when floating was preferred but could not be attempted. */
         val floatBlockReason: FloatBlockReason? = null,
     ) {
         val launched: Boolean get() = outcome != Outcome.NONE
     }
 
     /**
-     * Strategy ladder for the given settings — the pure [planFor] function
-     * of the settings, so `FloatingAppLauncherTest` can verify the
-     * settings → behaviour contract without a Context:
-     *
-     *  - floating on + prefer on  → float → split → full-screen → handle
-     *  - floating on + prefer off → split → float → full-screen → handle
-     *  - floating off             → split → full-screen → handle
-     *  - full-screen fallback off → the plain full-screen step is skipped;
-     *    the final handle step then only ever sends the source app's own
-     *    bubble intent (official bubbles are not a full-screen launch).
-     */
-    fun plan(settings: NotificationSettings): List<Step> = planFor(settings)
-
-    /**
-     * Opens [item]'s app on top of CHRONOS following [plan]. CHRONOS itself
-     * is never closed: every launch goes through the application context with
-     * FLAG_ACTIVITY_NEW_TASK, so the clock keeps running behind the new
-     * window, and closing that window returns to CHRONOS untouched.
+     * Opens [item]'s app on top of CHRONOS following [planFor]. CHRONOS
+     * itself is never closed: launches go through the application context
+     * with FLAG_ACTIVITY_NEW_TASK, so the clock keeps running behind the
+     * new window and closing that window returns to CHRONOS untouched.
      */
     fun open(item: NotificationItem, settings: NotificationSettings): LaunchResult {
-        val launch = try {
-            appContext.packageManager.getLaunchIntentForPackage(item.packageName)
-        } catch (_: Exception) {
-            null
+        val caps = Capabilities(
+            freeform = supportsFreeform(),
+            smallWindow = hasNativeSmallWindow(),
+        )
+        val plan = planFor(settings, caps)
+
+        // Guided Small Window flow: terminal — nothing is launched here.
+        // The user's own "Open app" tap in the dialog calls openFromGuide,
+        // so a full-screen open never happens silently.
+        if (Step.GUIDE_SMALL_WINDOW in plan) {
+            return LaunchResult(Outcome.SMALL_WINDOW_GUIDE)
         }
 
+        // Honest block tracking: only when floating was explicitly PREFERRED
+        // and the device has neither standard freeform nor the guided
+        // native path — then (and only then) the UI explains it.
+        var block: FloatBlockReason? = null
+        if (settings.floatingWindowsEnabled &&
+            settings.preferFloatingWindows &&
+            !caps.freeform &&
+            !caps.smallWindow
+        ) {
+            block = FloatBlockReason.DEVICE_UNSUPPORTED
+        }
+
+        val launch = getLaunchIntent(item.packageName)
         if (launch == null) {
             // Rare: no launcher entry (service-only app). Only the
             // notification's own handle can open it.
             return if (openHandle(item, settings.bubblesEnabled, settings.allowFullScreenFallback)) {
-                LaunchResult(Outcome.NOTIFICATION_HANDLE)
+                LaunchResult(Outcome.NOTIFICATION_HANDLE, block)
             } else {
-                LaunchResult(Outcome.NONE)
+                LaunchResult(Outcome.NONE, block)
             }
         }
-        launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
-        // Capability probe — both are decided by the OS and the target app,
-        // never by CHRONOS.
-        val deviceFreeform = supportsFreeform()
-        val resizable = targetAllowsResize(launch)
-        var block: FloatBlockReason? = null
-
-        for (step in plan(settings)) {
+        for (step in plan) {
             when (step) {
-                Step.FLOAT -> when {
-                    !deviceFreeform ->
-                        if (block == null) block = FloatBlockReason.DEVICE_UNSUPPORTED
-                    !resizable ->
-                        if (block == null) block = FloatBlockReason.TARGET_UNRESIZABLE
-                    startFloating(launch) ->
-                        return LaunchResult(Outcome.FLOATING)
-                    else ->
-                        if (block == null) block = FloatBlockReason.REFUSED
-                }
+                Step.FLOAT ->
+                    if (startFloating(launch)) {
+                        return LaunchResult(Outcome.FLOATING, block)
+                    } else if (block == null) {
+                        block = FloatBlockReason.REFUSED
+                    }
                 Step.SPLIT ->
                     if (startSplit(launch)) return LaunchResult(Outcome.SPLIT, block)
                 Step.FULL_SCREEN ->
@@ -129,9 +145,29 @@ class FloatingAppLauncher(private val appContext: Context) {
                     if (openHandle(item, settings.bubblesEnabled, settings.allowFullScreenFallback)) {
                         return LaunchResult(Outcome.NOTIFICATION_HANDLE, block)
                     }
+                Step.GUIDE_SMALL_WINDOW ->
+                    Unit // terminal; handled before the loop
             }
         }
         return LaunchResult(Outcome.NONE, block)
+    }
+
+    /**
+     * Step 1 of the guided Small Window flow — invoked only from the user's
+     * own "Open app" tap: the source app's bubble intent when bubbles are
+     * enabled (the official Android floating interaction), otherwise a
+     * plain launch so the app appears in Recents for the gesture.
+     */
+    fun openFromGuide(item: NotificationItem, settings: NotificationSettings): Boolean {
+        if (settings.bubblesEnabled &&
+            item.bubbleIntent != null &&
+            openHandle(item, useBubbles = true, allowFullScreen = true)
+        ) {
+            return true
+        }
+        val launch = getLaunchIntent(item.packageName)
+            ?: return openHandle(item, settings.bubblesEnabled, allowFullScreen = true)
+        return startPlain(launch)
     }
 
     /**
@@ -167,7 +203,27 @@ class FloatingAppLauncher(private val appContext: Context) {
         }
     }
 
-    /** True when the device advertises freeform (floating) windows. */
+    private fun getLaunchIntent(packageName: String): Intent? = try {
+        appContext.packageManager.getLaunchIntentForPackage(packageName)?.apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+    } catch (_: Exception) {
+        null
+    }
+
+    /**
+     * True when this device is a vivo/iQOO phone (Funtouch OS / OriginOS).
+     * These always ship the native Small Window feature — the guided path
+     * replaces any generic freeform claim so the user is never told their
+     * phone "doesn't provide floating windows" when it does.
+     */
+    private fun hasNativeSmallWindow(): Boolean {
+        val manufacturer = Build.MANUFACTURER.orEmpty().lowercase()
+        val brand = Build.BRAND.orEmpty().lowercase()
+        return manufacturer == "vivo" || brand == "vivo" || brand == "iqoo"
+    }
+
+    /** True when the device advertises standard Android freeform windows. */
     private fun supportsFreeform(): Boolean = try {
         // PackageManager.FEATURE_FREEFORM_WINDOW_MANAGEMENT, spelled out so
         // it compiles cleanly against every SDK level.
@@ -177,38 +233,12 @@ class FloatingAppLauncher(private val appContext: Context) {
     }
 
     /**
-     * True when the target activity allows itself to be resized — apps that
-     * declare `resizeableActivity=false` are refused by Android in both
-     * freeform and (older) split mode, so trying to float them would only
-     * produce a plain full-screen launch.
-     */
-    private fun targetAllowsResize(launch: Intent): Boolean = try {
-        val component = launch.component ?: return true
-        val info = appContext.packageManager.getActivityInfo(component, 0)
-        // ActivityInfo.resizeMode is hidden from the SDK: read it by
-        // reflection. RESIZE_MODE_UNRESIZEABLE == 0 (also the default for
-        // pre-N apps) means the app forbids resizing; anything else may be
-        // floated. If the field cannot be read, assume resizable — the
-        // attempt then degrades exactly like the plain bounds launch.
-        val mode = runCatching {
-            android.content.pm.ActivityInfo::class.java
-                .getField("resizeMode")
-                .getInt(info)
-        }.getOrDefault(2)
-        mode != 0
-    } catch (_: Exception) {
-        true
-    }
-
-    /**
-     * Starts [launch] as a floating window covering ~78 % of the screen,
-     * centred a little above the middle so CHRONOS stays visible around it.
-     *
-     * Sets the FREEFORM windowing mode explicitly (hidden API — reached by
-     * reflection, best-effort) and supplies bounds; together these are what
-     * the window manager needs to place the app on top of CHRONOS. Bounds
-     * alone never guarantee freeform — that is why the windowing mode is set
-     * explicitly and any refusal returns false for the next step.
+     * Starts [launch] with public window bounds (~78 % of the screen,
+     * centred a little above the middle so CHRONOS stays visible around
+     * it). `ActivityOptions.setLaunchBounds` is the documented public hint;
+     * whether the OS places the activity in freeform is the OS's decision
+     * (this step is only planned on devices that advertise freeform).
+     * Any refusal returns false so the ladder continues.
      */
     private fun startFloating(launch: Intent): Boolean = try {
         val dm = appContext.resources.displayMetrics
@@ -217,14 +247,6 @@ class FloatingAppLauncher(private val appContext: Context) {
         val left = (dm.widthPixels - w) / 2
         val top = ((dm.heightPixels - h) * 0.36f).toInt()
         val options = ActivityOptions.makeBasic()
-        // ActivityOptions.setLaunchWindowingMode(5 = WINDOWING_MODE_FREEFORM)
-        // is hidden from the public SDK; reflection is wrapped so a blocked
-        // call just falls back to bounds-only launching.
-        runCatching {
-            ActivityOptions::class.java
-                .getMethod("setLaunchWindowingMode", Integer.TYPE)
-                .invoke(options, 5)
-        }
         options.setLaunchBounds(Rect(left, top, left + w, top + h))
         appContext.startActivity(Intent(launch), options.toBundle())
         true
@@ -251,19 +273,40 @@ class FloatingAppLauncher(private val appContext: Context) {
 
     companion object {
         /**
-         * Pure strategy ladder — kept static so `FloatingAppLauncherTest`
-         * can verify the settings → behaviour contract without a Context.
+         * Pure strategy ladder (settings × device capabilities) — kept
+         * static so `FloatingAppLauncherTest` can verify the contract
+         * without a Context:
+         *
+         *  - **Small Window device** (vivo/iQOO) + floating enabled +
+         *    instructions on + full-screen allowed → `[GUIDE_SMALL_WINDOW]`
+         *    alone: the guided Recents workflow, nothing launched yet.
+         *  - freeform device → float (if preferred) → split → full-screen →
+         *    handle, honouring every Floating App Windows switch.
+         *  - otherwise → split → full-screen → handle (no float step is
+         *    planned where it cannot work, so no float claim can be made).
+         *  - full-screen fallback off → the plain full-screen step is
+         *    skipped; the final handle step then only ever sends the source
+         *    app's own bubble intent (official bubbles are not full-screen).
          */
-        fun planFor(settings: NotificationSettings): List<Step> = buildList {
-            val tryFloat = settings.floatingWindowsEnabled
-            if (tryFloat && settings.preferFloatingWindows) add(Step.FLOAT)
-            add(Step.SPLIT)
-            if (tryFloat && !settings.preferFloatingWindows) add(Step.FLOAT)
-            if (settings.allowFullScreenFallback) {
-                add(Step.FULL_SCREEN)
-                add(Step.HANDLE)
-            } else {
-                add(Step.HANDLE)
+        fun planFor(settings: NotificationSettings, caps: Capabilities): List<Step> {
+            if (caps.smallWindow &&
+                settings.floatingWindowsEnabled &&
+                settings.showFloatingInstructions &&
+                settings.allowFullScreenFallback
+            ) {
+                return listOf(Step.GUIDE_SMALL_WINDOW)
+            }
+            val canFloat = settings.floatingWindowsEnabled && caps.freeform && !caps.smallWindow
+            return buildList {
+                if (canFloat && settings.preferFloatingWindows) add(Step.FLOAT)
+                add(Step.SPLIT)
+                if (canFloat && !settings.preferFloatingWindows) add(Step.FLOAT)
+                if (settings.allowFullScreenFallback) {
+                    add(Step.FULL_SCREEN)
+                    add(Step.HANDLE)
+                } else {
+                    add(Step.HANDLE)
+                }
             }
         }
     }

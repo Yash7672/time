@@ -135,14 +135,18 @@ class HomeViewModel(
 
     /**
      * User-facing explanation of a floating-window launch that could not
-     * engage (device or app limitation), or of a tap that opened nothing.
-     * `null` = nothing to explain. Shown as a dismissible dialog only when
-     * Settings → Floating App Windows → "Show instructions" is on.
+     * engage (device or app limitation), a tap that opened nothing, or the
+     * guided Small Window walkthrough. `null` = hidden. Shown as a
+     * dismissible dialog only when Settings → Floating App Windows →
+     * "Show instructions" is on (the guided walkthrough itself is that
+     * switch's iQOO/vivo behaviour).
      */
     data class FloatingWindowNotice(
         val appLabel: String,
         val outcome: FloatingAppLauncher.Outcome,
         val floatBlockReason: FloatingAppLauncher.FloatBlockReason?,
+        /** True = guided Small Window walkthrough; nothing launched yet. */
+        val guided: Boolean = false,
     )
 
     /**
@@ -152,28 +156,57 @@ class HomeViewModel(
     private val _floatingNotice = MutableStateFlow<FloatingWindowNotice?>(null)
     val floatingNotice: StateFlow<FloatingWindowNotice?> = _floatingNotice
 
+    /** The group behind the guided walkthrough — consumed by its "Open app". */
+    private var pendingGuideGroup: NotificationGroup? = null
+
     fun dismissFloatingNotice() {
         _floatingNotice.value = null
+        pendingGuideGroup = null
     }
 
     /**
      * One tap on a notification icon: open the app on top of CHRONOS via
-     * [FloatingAppLauncher] (real freeform window → split → full-screen →
-     * notification handle) and, when floating could not engage or nothing
-     * opened, surface the honest explanation the settings ask for.
+     * [FloatingAppLauncher]. On vivo/iQOO phones this surfaces the guided
+     * native Small Window walkthrough (vivo exposes no public direct-launch
+     * API) instead of falsely claiming automatic floating-window support;
+     * elsewhere it explains honestly when freeform could not engage.
      */
     fun openAppMultiWindow(group: NotificationGroup) {
         val notifSettings = settings.value.notifications
         val result = notifications.openInMultiWindow(group.latest)
-        val blocked = result.floatBlockReason
+        if (result.outcome == FloatingAppLauncher.Outcome.SMALL_WINDOW_GUIDE) {
+            pendingGuideGroup = group
+            _floatingNotice.value = FloatingWindowNotice(
+                appLabel = group.appLabel,
+                outcome = result.outcome,
+                floatBlockReason = null,
+                guided = true,
+            )
+            return
+        }
         if (notifSettings.showFloatingInstructions &&
-            (blocked != null || result.outcome == FloatingAppLauncher.Outcome.NONE)
+            (result.floatBlockReason != null ||
+                result.outcome == FloatingAppLauncher.Outcome.NONE)
         ) {
             _floatingNotice.value = FloatingWindowNotice(
                 appLabel = group.appLabel,
                 outcome = result.outcome,
-                floatBlockReason = blocked,
+                floatBlockReason = result.floatBlockReason,
             )
+        }
+    }
+
+    /**
+     * The guided walkthrough's "Open app" button — the user's own explicit
+     * step 1: open the app (bubble first when available) so it appears in
+     * Recents, where the Small Window gesture finishes the job.
+     */
+    fun confirmSmallWindowGuide() {
+        val group = pendingGuideGroup
+        pendingGuideGroup = null
+        _floatingNotice.value = null
+        if (group != null) {
+            notifications.openFromGuide(group.latest)
         }
     }
 

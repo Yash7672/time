@@ -53,6 +53,15 @@ class NotificationManager(
     fun openInMultiWindow(item: NotificationItem): FloatingAppLauncher.LaunchResult =
         launcher.open(item, repository.settings.value)
 
+    /**
+     * Step 1 of the guided Small Window flow — runs only from the user's
+     * own "Open app" tap in the guidance dialog (bubble first when the
+     * source app offers one, otherwise a plain launch so the app shows up
+     * in Recents for the Small Window gesture).
+     */
+    fun openFromGuide(item: NotificationItem): Boolean =
+        launcher.openFromGuide(item, repository.settings.value)
+
     /** Dismiss through the listener service; only possible with granted access. */
     fun dismiss(item: NotificationItem): Boolean {
         val listener = NotificationListener.active

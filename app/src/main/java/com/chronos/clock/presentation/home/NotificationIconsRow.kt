@@ -432,25 +432,33 @@ private fun ReplyDialog(
 }
 
 /**
- * Explains a floating-window launch that could not engage (or a tap that
- * opened nothing). Android — not CHRONOS — decides whether freeform
- * windows exist on this device and whether the target app may be resized;
- * this dialog only reports that decision honestly, says what opened
- * instead, and points at the system switch where one exists. It never
- * blocks the clock: dismiss or back closes it, CHRONOS keeps running.
- * Shown only when Settings → Floating App Windows → "Show instructions
- * for unsupported devices" is on.
+ * Bottom-of-clock dialog for a notification-icon tap. Two honest modes:
+ *
+ *  - **Guided Small Window walkthrough** (vivo/iQOO — [HomeViewModel.FloatingWindowNotice.guided]):
+ *    the native Small Window is the real floating window on these phones,
+ *    but vivo exposes no public API to launch it — so the dialog states
+ *    the exact Recents steps and only opens the app when the user taps
+ *    "Open app" themselves. Nothing launches silently.
+ *  - **Explanation** — a floating launch could not engage or nothing
+ *    opened; the dialog reports what actually happened (never claims a
+ *    floating success), what opened instead, and where to change it.
+ *
+ * It never blocks the clock: dismiss/back closes it and CHRONOS keeps
+ * running. Shown only when Settings → Floating App Windows → "Show
+ * instructions for unsupported devices" is on.
  */
 @Composable
 fun FloatingWindowNoticeDialog(
     notice: HomeViewModel.FloatingWindowNotice,
     onDismiss: () -> Unit,
+    onOpenApp: () -> Unit = onDismiss,
 ) {
     val palette = Chronos.palette
-    val title = if (notice.outcome == FloatingAppLauncher.Outcome.NONE) {
-        "Couldn't open the app"
-    } else {
-        "Floating window unavailable"
+    val guided = notice.guided
+    val title = when {
+        guided -> "Open as Small Window"
+        notice.outcome == FloatingAppLauncher.Outcome.NONE -> "Couldn't open the app"
+        else -> "Floating window unavailable"
     }
     Dialog(onDismissRequest = onDismiss) {
         Column(
@@ -467,7 +475,7 @@ fun FloatingWindowNoticeDialog(
                 fontWeight = FontWeight.Medium,
             )
             Text(
-                text = notice.explanation(),
+                text = if (guided) notice.guideSteps() else notice.explanation(),
                 color = palette.textFaint,
                 fontSize = 13.sp,
                 lineHeight = 18.sp,
@@ -479,23 +487,72 @@ fun FloatingWindowNoticeDialog(
                     .padding(top = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Spacer(Modifier.weight(1f))
-                Text(
-                    text = "OK",
-                    color = palette.accent,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable(onClick = onDismiss)
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
-                )
+                if (guided) {
+                    Text(
+                        text = "Cancel",
+                        color = palette.textSecondary,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable(onClick = onDismiss)
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        text = "Open app",
+                        color = palette.accent,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable(onClick = onOpenApp)
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                    )
+                } else {
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        text = "OK",
+                        color = palette.accent,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable(onClick = onDismiss)
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                    )
+                }
             }
         }
     }
 }
 
-/** Honest, device-aware copy for [FloatingWindowNoticeDialog]. */
+/**
+ * The guided Small Window walkthrough — steps verified against vivo's own
+ * support documentation (Recents → arrow next to the app name → Small
+ * window) and iQOO's community Small Window guide, including the Mini
+ * Small Window behaviour (minimize, tap to enlarge, drag to the edge to
+ * hang, drag to the bottom to remove).
+ */
+private fun HomeViewModel.FloatingWindowNotice.guideSteps(): String = """
+    CHRONOS opens $appLabel first so it appears in Recents — the clock keeps
+    running behind it.
+
+    1. Swipe up from the bottom and hold to open Recents.
+    2. Tap the arrow next to $appLabel's name (or long-press its card).
+    3. Tap Small window.
+
+    The window then floats over CHRONOS with native iQOO controls: drag the
+    top bar to move, drag the corners to resize, minimise for a Mini Small
+    Window (tap to enlarge, drag to a screen edge to hang it, drag to the
+    bottom to remove), and X to close. Closing it returns to CHRONOS
+    untouched.
+
+    Only apps that support Small window show that option — if it is missing,
+    $appLabel simply opens normally instead.
+""".trimIndent()
+
+/** Honest, device-aware copy for the non-guided [FloatingWindowNoticeDialog]. */
 private fun HomeViewModel.FloatingWindowNotice.explanation(): String {
     val opened = when (outcome) {
         FloatingAppLauncher.Outcome.FLOATING -> "a floating window"
@@ -503,6 +560,7 @@ private fun HomeViewModel.FloatingWindowNotice.explanation(): String {
         FloatingAppLauncher.Outcome.FULL_SCREEN -> "full screen"
         FloatingAppLauncher.Outcome.NOTIFICATION_HANDLE -> "its notification"
         FloatingAppLauncher.Outcome.NONE -> null
+        FloatingAppLauncher.Outcome.SMALL_WINDOW_GUIDE -> null // guided mode never reaches this
     }
     val fallbackNote = if (outcome == FloatingAppLauncher.Outcome.NONE) {
         " CHRONOS kept running. If you want apps to open the normal " +
@@ -513,17 +571,12 @@ private fun HomeViewModel.FloatingWindowNotice.explanation(): String {
     }
     return when (floatBlockReason) {
         FloatingAppLauncher.FloatBlockReason.DEVICE_UNSUPPORTED ->
-            "This device doesn't provide Android floating (freeform) " +
-                "windows, so $appLabel opened in ${opened ?: "the normal way"}" +
-                " instead. Some devices expose the feature in Settings → " +
-                "Developer options → “Enable freeform windows” or " +
-                "“Force enable freeform window mode” (the exact " +
-                "name varies by manufacturer). CHRONOS always falls back to " +
-                "a normal launch." + fallbackNote
-        FloatingAppLauncher.FloatBlockReason.TARGET_UNRESIZABLE ->
-            "$appLabel declares itself non-resizable, so Android refuses to " +
-                "float it. It opened in ${opened ?: "the normal way"} instead." +
-                " CHRONOS never forces other apps into a window." + fallbackNote
+            "This device doesn't expose the standard Android freeform-window " +
+                "launch, so $appLabel opened in ${opened ?: "the normal way"}" +
+                " instead. Some phones provide their own floating-window " +
+                "features in their own settings (varies by manufacturer) — " +
+                "CHRONOS uses only public Android APIs and always falls back " +
+                "to a normal launch." + fallbackNote
         FloatingAppLauncher.FloatBlockReason.REFUSED ->
             "Android refused the floating-window launch for $appLabel. It " +
                 "opened in ${opened ?: "the normal way"} instead." + fallbackNote

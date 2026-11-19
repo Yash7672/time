@@ -232,12 +232,15 @@ fun HomeScreen(
     }
 
     // Explain a floating-window launch that could not engage (device or
-    // app limitation), or a tap that opened nothing. Never blocks the
-    // clock; dismissible; only shown when the settings ask for it.
+    // app limitation), or a tap that opened nothing — or, on vivo/iQOO
+    // phones, show the guided native Small Window walkthrough (nothing
+    // launches until the user taps "Open app"). Never blocks the clock;
+    // dismissible; only shown when the settings ask for it.
     floatingNotice?.let { notice ->
         FloatingWindowNoticeDialog(
             notice = notice,
             onDismiss = viewModel::dismissFloatingNotice,
+            onOpenApp = viewModel::confirmSmallWindowGuide,
         )
     }
 }

@@ -205,8 +205,9 @@ fun NotificationSettingsSection(
             checked = settings.showFloatingInstructions,
             onCheckedChange = { onChange(settings.copy(showFloatingInstructions = it)) },
             description = "Explain after a tap when your device or an app " +
-                "blocks floating windows, what opened instead, and where " +
-                "floating windows can be enabled on devices that offer them.",
+                "blocks floating windows and what opened instead. On iQOO/" +
+                "vivo phones this shows the guided native Small Window " +
+                "workflow (Recents → Small window) instead.",
         )
     }
 
