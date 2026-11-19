@@ -166,13 +166,14 @@ class HomeViewModel(
 
     /**
      * One tap on a notification icon: open the app on top of CHRONOS via
-     * [FloatingAppLauncher]. On vivo/iQOO phones this surfaces the guided
-     * native Small Window walkthrough (vivo exposes no public direct-launch
-     * API) instead of falsely claiming automatic floating-window support;
-     * elsewhere it explains honestly when freeform could not engage.
+     * [FloatingAppLauncher]. On vivo/iQOO phones the tap **automatically
+     * attempts the native Small Window** — no dialog, no instructions.
+     * The guided walkthrough only appears as a last resort when nothing
+     * could be opened at all; elsewhere an honest dialog explains when
+     * freeform could not engage (and only when "Show instructions" is on —
+     * the launcher decides via [FloatingAppLauncher.LaunchResult.showNotice]).
      */
     fun openAppMultiWindow(group: NotificationGroup) {
-        val notifSettings = settings.value.notifications
         val result = notifications.openInMultiWindow(group.latest)
         if (result.outcome == FloatingAppLauncher.Outcome.SMALL_WINDOW_GUIDE) {
             pendingGuideGroup = group
@@ -184,10 +185,7 @@ class HomeViewModel(
             )
             return
         }
-        if (notifSettings.showFloatingInstructions &&
-            (result.floatBlockReason != null ||
-                result.outcome == FloatingAppLauncher.Outcome.NONE)
-        ) {
+        if (result.showNotice) {
             _floatingNotice.value = FloatingWindowNotice(
                 appLabel = group.appLabel,
                 outcome = result.outcome,

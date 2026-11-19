@@ -65,11 +65,12 @@ All three keep clock accuracy independent of visual effects.
 - Optional **notification-listener** integration: shows one original app icon
   per app along the bottom of the clock screen with an unread dot/count.
   Tap an icon to open that app over CHRONOS — on **iQOO/vivo phones** that
-  means the guided **native Small Window** workflow (the real floating
-  window on Funtouch OS), on stock freeform devices a floating/`setLaunchBounds`
-  window, otherwise **split screen** beside it; long-press
-  opens the quick-reply sheet (or dismisses the
-  notification when the app offers no reply action). The integration setting
+  attempts the **native Small Window** automatically (the real floating
+  window on Funtouch OS), on freeform-capable devices a floating
+  `setLaunchBounds` window, otherwise **split screen** beside it;
+  long-press opens the quick-reply sheet, which shows the sender and
+  message you are replying to (or dismisses the notification when the app
+  offers no reply action). The integration setting
   itself is **on by default** — the only thing Android requires is the
   notification-access grant, which CHRONOS can never give itself.
 - Access is requested **only** via Android's own consent screen — CHRONOS
@@ -104,23 +105,29 @@ All three keep clock accuracy independent of visual effects.
   - **iQOO / vivo (Funtouch OS / OriginOS)**: the native **Small Window**
     is the real floating window there (rounded corners, title-bar
     minimize/maximize/close, drag to move, drag corners to resize, Mini
-    Small Window mode). vivo publishes **no public intent/API** to launch
-    it directly (their developer doc is an app-adaptation guide), so
-    CHRONOS shows the **guided Recents workflow** — swipe up & hold →
-    arrow next to the app name → *Small window* — and only opens the app
-    when you tap **Open app** yourself. Nothing launches silently.
-  - **Stock freeform devices** (advertise
-    `FEATURE_FREEFORM_WINDOW_MANAGEMENT`): public
-    `ActivityOptions.setLaunchBounds` attempt, then split screen.
+    Small Window mode). CHRONOS attempts it **automatically on tap**:
+    public `ActivityOptions.setLaunchBounds` plus the AOSP launch-options
+    windowing-mode key (`android.activity.windowingMode`, written with a
+    plain `Bundle.putInt` — the same data `am start --windowingMode 5`
+    sends; no reflection, no hidden method, no permission gate on that key
+    in `SafeActivityOptions`). If the system refuses every route, the
+    **guided Recents workflow** (swipe up & hold → arrow next to the app
+    name → *Small window*) appears as a last resort — and only then.
+  - **Freeform-capable devices** (advertise
+    `FEATURE_FREEFORM_WINDOW_MANAGEMENT` or have the system's
+    `enable_freeform_support` switch set — the Developer-options/adb
+    toggle): the same public bounded freeform attempt, then split screen.
   - **Everything else**: split screen → normal full-screen → the source
     notification's own bubble/content handle.
 
   Every step degrades to the next; CHRONOS itself never closes. The ladder
   is driven by Settings → Notifications → Floating App Windows and is
-  unit-tested (`FloatingAppLauncherTest`). When a floating launch cannot
-  engage, an honest dismissible dialog says what actually opened instead —
-  never a floating success that did not happen — and can be switched off
-  with *Show instructions for unsupported devices*.
+  unit-tested (`FloatingAppLauncherTest`). When nothing could be opened —
+  or floating was blocked on a device with no floating support — an honest
+  dismissible dialog says what actually opened instead, never a floating
+  success that did not happen; it can be switched off with *Show
+  instructions for unsupported devices*, and a working tap on a Small
+  Window phone never shows a dialog.
 
 ### Settings (persisted with Jetpack DataStore)
 1. **Clock** — format, seconds, date, day, size, brightness
@@ -150,13 +157,14 @@ All three keep clock accuracy independent of visual effects.
 - **Floating windows / bubbles**: whether WhatsApp or any app appears as a
   bubble or floating window is controlled by **Android and that app**, not by
   CHRONOS. It attempts only officially supported routes — the source
-  notification's own bubble/content intent, the public
-  `ActivityOptions.setLaunchBounds` hint on freeform devices, split screen,
-  and the **guided native Small Window workflow on iQOO/vivo** (vivo exposes
-  no public direct-launch API) — then falls back to a normal launch. It
-  cannot force a third-party app into a floating window on devices that do
-  not offer one, and Funtouch OS only lists apps it supports for Small
-  window.
+  notification's own bubble/content intent, the public bounded freeform
+  launch (window bounds + AOSP windowing-mode option, on devices where
+  freeform is allowed: the feature flag or the `enable_freeform_support`
+  Developer-options switch), split screen, and — as a last resort on
+  iQOO/vivo — the guided native Small Window workflow — then falls back to
+  a normal launch. It cannot force a third-party app into a floating window
+  on devices that do not offer one, and Funtouch OS only lists apps it
+  supports for Small window.
 - **Notification icons**: Android does not allow one app to recolour or replace
   another app's notification icon. CHRONOS always shows the **original**
   application icon.

@@ -178,10 +178,12 @@ fun NotificationSettingsSection(
             title = "Enable floating-window launch",
             checked = settings.floatingWindowsEnabled,
             onCheckedChange = { onChange(settings.copy(floatingWindowsEnabled = it)) },
-            description = "Open a tapped app in a real Android floating " +
-                "(freeform) window on top of the clock, with the system's own " +
-                "window controls. Availability is decided by your device and " +
-                "the target app — CHRONOS never forces it.",
+            description = "Tap an app icon to open it in a real Android " +
+                "floating (freeform) window over the clock — attempted " +
+                "automatically (on vivo/iQOO: the native Small Window), " +
+                "with the system's own window controls. The result is " +
+                "decided by your device and the target app — CHRONOS never " +
+                "forces it and never claims a window that didn't appear.",
         )
         SwitchRow(
             title = "Prefer floating windows when supported",
@@ -206,8 +208,9 @@ fun NotificationSettingsSection(
             onCheckedChange = { onChange(settings.copy(showFloatingInstructions = it)) },
             description = "Explain after a tap when your device or an app " +
                 "blocks floating windows and what opened instead. On iQOO/" +
-                "vivo phones this shows the guided native Small Window " +
-                "workflow (Recents → Small window) instead.",
+                "vivo phones it also enables the guided Small Window " +
+                "workflow — shown only if a tap couldn't open the app at " +
+                "all; working taps never show dialogs.",
         )
     }
 

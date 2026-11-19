@@ -350,13 +350,28 @@ private fun ReplyDialog(
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium,
             )
-            val preview = group.latest.title ?: group.latest.text
-            if (preview != null) {
+            // Show exactly what is being replied to — the latest
+            // notification's sender/title and message body. CHRONOS only
+            // ever knows what the notification carried; it never claims
+            // access to the rest of the conversation.
+            val sender = group.latest.title
+            val message = group.latest.text
+            if (sender != null) {
                 Text(
-                    text = preview,
-                    color = palette.textFaint,
+                    text = "Replying to $sender",
+                    color = palette.textSecondary,
                     fontSize = 12.sp,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 3.dp),
+                )
+            }
+            if (message != null) {
+                Text(
+                    text = message,
+                    color = palette.textFaint,
+                    fontSize = 12.sp,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = 2.dp),
                 )
@@ -435,10 +450,11 @@ private fun ReplyDialog(
  * Bottom-of-clock dialog for a notification-icon tap. Two honest modes:
  *
  *  - **Guided Small Window walkthrough** (vivo/iQOO — [HomeViewModel.FloatingWindowNotice.guided]):
- *    the native Small Window is the real floating window on these phones,
- *    but vivo exposes no public API to launch it — so the dialog states
- *    the exact Recents steps and only opens the app when the user taps
- *    "Open app" themselves. Nothing launches silently.
+ *    shown **only as a last resort**, when the automatic native Small
+ *    Window attempt and every other launch route failed. The dialog
+ *    states the exact Recents steps and only opens the app when the user
+ *    taps "Open app" themselves. A tap that can open the app never shows
+ *    this dialog.
  *  - **Explanation** — a floating launch could not engage or nothing
  *    opened; the dialog reports what actually happened (never claims a
  *    floating success), what opened instead, and where to change it.
@@ -528,19 +544,23 @@ fun FloatingWindowNoticeDialog(
 }
 
 /**
- * The guided Small Window walkthrough — steps verified against vivo's own
- * support documentation (Recents → arrow next to the app name → Small
- * window) and iQOO's community Small Window guide, including the Mini
- * Small Window behaviour (minimize, tap to enlarge, drag to the edge to
- * hang, drag to the bottom to remove).
+ * The guided Small Window walkthrough — the **last resort** after the
+ * automatic attempt and every other launch route failed. Steps verified
+ * against vivo's own support documentation (Recents → arrow next to the
+ * app name → Small window) and iQOO's community Small Window guide,
+ * including the Mini Small Window behaviour (minimize, tap to enlarge,
+ * drag to the edge to hang, drag to the bottom to remove).
  */
 private fun HomeViewModel.FloatingWindowNotice.guideSteps(): String = """
-    CHRONOS opens $appLabel first so it appears in Recents — the clock keeps
-    running behind it.
+    CHRONOS couldn't open $appLabel automatically — the system didn't
+    allow a floating window right now. You can still open it as a Small
+    Window yourself:
 
-    1. Swipe up from the bottom and hold to open Recents.
-    2. Tap the arrow next to $appLabel's name (or long-press its card).
-    3. Tap Small window.
+    1. Tap Open app — $appLabel appears in Recents (the clock keeps
+       running behind it).
+    2. Swipe up from the bottom and hold to open Recents.
+    3. Tap the arrow next to $appLabel's name (or long-press its card),
+       then tap Small window.
 
     The window then floats over CHRONOS with native iQOO controls: drag the
     top bar to move, drag the corners to resize, minimise for a Mini Small
@@ -573,10 +593,11 @@ private fun HomeViewModel.FloatingWindowNotice.explanation(): String {
         FloatingAppLauncher.FloatBlockReason.DEVICE_UNSUPPORTED ->
             "This device doesn't expose the standard Android freeform-window " +
                 "launch, so $appLabel opened in ${opened ?: "the normal way"}" +
-                " instead. Some phones provide their own floating-window " +
-                "features in their own settings (varies by manufacturer) — " +
-                "CHRONOS uses only public Android APIs and always falls back " +
-                "to a normal launch." + fallbackNote
+                " instead. CHRONOS uses only public Android APIs and always " +
+                "falls back to a normal launch. Tip: if your phone has " +
+                "Developer options, turn on “Enable freeform windows” " +
+                "(or “Force activities to be resizable”) there — taps will " +
+                "then float automatically." + fallbackNote
         FloatingAppLauncher.FloatBlockReason.REFUSED ->
             "Android refused the floating-window launch for $appLabel. It " +
                 "opened in ${opened ?: "the normal way"} instead." + fallbackNote
