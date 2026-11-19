@@ -1,8 +1,10 @@
 package com.chronos.clock.presentation.home
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -17,8 +19,9 @@ import com.chronos.clock.presentation.theme.Chronos
 import java.util.Locale
 
 /**
- * Date + day-of-week block shown directly beneath the clock. Secondary to
- * the time but sized to stay clearly readable at a glance.
+ * Date + day-of-week block shown directly beneath the clock, side by side
+ * on one line (date first, day after). Secondary to the time but sized to
+ * stay clearly readable at a glance.
  */
 @Composable
 fun DateView(
@@ -29,10 +32,10 @@ fun DateView(
     val palette = Chronos.palette
     val locale = Locale.getDefault()
 
-    Column(
+    Row(
         modifier = modifier.padding(horizontal = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         if (settings.showDate) {
             Text(
@@ -47,6 +50,9 @@ fun DateView(
             )
         }
         if (settings.showDay) {
+            if (settings.showDate) {
+                Spacer(Modifier.width(10.dp))
+            }
             Text(
                 text = TimeUtils.formatDay(nowMillis, locale = locale)
                     .uppercase(locale),
@@ -57,7 +63,6 @@ fun DateView(
                 ),
                 color = palette.textFaint,
                 maxLines = 1,
-                modifier = Modifier.padding(top = if (settings.showDate) 2.dp else 0.dp),
             )
         }
     }

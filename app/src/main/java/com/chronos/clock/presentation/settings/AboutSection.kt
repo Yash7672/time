@@ -66,11 +66,12 @@ fun AboutSection(versionName: String) {
 
     SectionHeader("Known Android limitations")
     NoteText(
-        "• Split screen: tapping an app icon asks Android to open that app " +
-            "beside CHRONOS in multi-window. Whether it truly splits is " +
-            "decided by the device and that app's own resize support — " +
-            "otherwise it opens normally, and Back inside it closes it " +
-            "again.\n" +
+        "• Floating / split windows: tapping an app icon opens it in a " +
+            "floating window over CHRONOS when the device supports freeform " +
+            "windows, otherwise beside it in split screen (or normally if " +
+            "the app refuses). Whether it truly floats or splits is decided " +
+            "by the device and that app's own resize support — Back inside " +
+            "it closes it again.\n" +
             "• Notification icons: Android does not allow one app to recolour " +
             "or replace another app's notification icon. CHRONOS always shows " +
             "the original application icon.\n" +

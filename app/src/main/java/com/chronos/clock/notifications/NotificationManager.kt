@@ -1,8 +1,10 @@
 package com.chronos.clock.notifications
 
+import android.app.ActivityOptions
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.graphics.Rect
 import com.chronos.clock.domain.model.NotificationItem
 
 /**
@@ -63,13 +65,15 @@ class NotificationManager(
     }
 
     /**
-     * Opens the source app in multi-window (split screen) beside CHRONOS.
+     * Opens the source app on top of CHRONOS.
      *
-     * [Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT] asks Android to give the app its
-     * own window area next to CHRONOS; the screen splits so both stay usable.
-     * Devices or apps without multi-window support simply fall back to a
-     * normal full launch — never a crash. Pressing Back inside that window
-     * closes it again and CHRONOS takes the whole screen back.
+     * Preference order:
+     *  1. **Floating window** (freeform) when the device supports it — the
+     *     app appears as a small window floating over CHRONOS.
+     *  2. **Split screen** beside CHRONOS ([Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT]).
+     *  3. A plain full-screen launch.
+     * Back inside the opened window closes it and CHRONOS takes the screen
+     * back. Every step degrades to the next — never a crash.
      */
     fun openInMultiWindow(item: NotificationItem): Boolean {
         val launch = try {
@@ -78,7 +82,13 @@ class NotificationManager(
             null
         }
         if (launch != null) {
-            launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT)
+            launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+            // 1) Floating window over CHRONOS when the device has freeform.
+            if (supportsFreeform() && startFloating(launch)) return true
+
+            // 2) Split screen beside CHRONOS.
+            launch.addFlags(Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT)
             return try {
                 appContext.startActivity(launch)
                 true
@@ -96,6 +106,35 @@ class NotificationManager(
         // No launcher entry (rare): fall back to the notification's own
         // handle — bubble intent first when the user prefers bubbles.
         return open(item, useBubbles = repository.settings.value.bubblesEnabled)
+    }
+
+    /** True when the device advertises freeform (floating) windows. */
+    private fun supportsFreeform(): Boolean = try {
+        // PackageManager.FEATURE_FREEFORM_WINDOW_MANAGEMENT, spelled out so
+        // it compiles cleanly against every SDK level.
+        appContext.packageManager.hasSystemFeature("android.software.freeform_window_management")
+    } catch (_: Exception) {
+        false
+    }
+
+    /**
+     * Starts [launch] as a floating window covering ~78 % of the screen,
+     * centred a little above the middle so CHRONOS stays visible around it.
+     * Returns false when the system refuses the bounds, so the caller can
+     * fall back to split screen.
+     */
+    private fun startFloating(launch: Intent): Boolean = try {
+        val dm = appContext.resources.displayMetrics
+        val w = (dm.widthPixels * 0.78f).toInt()
+        val h = (dm.heightPixels * 0.78f).toInt()
+        val left = (dm.widthPixels - w) / 2
+        val top = ((dm.heightPixels - h) * 0.36f).toInt()
+        val options = ActivityOptions.makeBasic()
+            .setLaunchBounds(Rect(left, top, left + w, top + h))
+        appContext.startActivity(launch, options.toBundle())
+        true
+    } catch (_: Exception) {
+        false
     }
 
     /** Dismiss through the listener service; only possible with granted access. */

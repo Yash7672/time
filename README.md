@@ -64,8 +64,9 @@ All three keep clock accuracy independent of visual effects.
 ### Smart notifications (privacy-first)
 - Optional **notification-listener** integration: shows one original app icon
   per app along the bottom of the clock screen with an unread dot/count.
-  Tap an icon to open that app beside CHRONOS in **multi-window (split
-  screen)**; long-press opens the quick-reply sheet (or dismisses the
+  Tap an icon to open that app **floating over CHRONOS** (on devices that
+  support freeform windows) **or in split screen** beside it; long-press
+  opens the quick-reply sheet (or dismisses the
   notification when the app offers no reply action). The integration setting
   itself is **on by default** — the only thing Android requires is the
   notification-access grant, which CHRONOS can never give itself.

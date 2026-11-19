@@ -33,7 +33,6 @@ import com.chronos.clock.ui.components.SwitchRow
 fun NotificationSettingsSection(
     settings: NotificationSettings,
     accessGranted: Boolean,
-    installedApps: List<AppEntry>,
     onChange: (NotificationSettings) -> Unit,
     onOpenAppPicker: () -> Unit,
 ) {
@@ -111,19 +110,42 @@ fun NotificationSettingsSection(
                 "persisted and never sent anywhere.",
         )
 
-        Text(
-            text = if (settings.allowedPackages.isEmpty()) {
-                "Selected apps: all apps"
-            } else {
-                "Selected apps: ${settings.allowedPackages.size} chosen"
-            },
-            style = TextStyle(fontSize = 15.sp),
-            color = palette.textPrimary,
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onOpenAppPicker)
                 .padding(horizontal = 20.dp, vertical = 12.dp),
-        )
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = "Choose apps",
+                    style = TextStyle(fontSize = 15.sp),
+                    color = palette.textPrimary,
+                )
+                Text(
+                    text = "Pick which apps appear on the clock",
+                    style = TextStyle(fontSize = 11.sp),
+                    color = palette.textFaint,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
+            Text(
+                text = if (settings.allowedPackages.isEmpty()) {
+                    "All apps"
+                } else {
+                    "${settings.allowedPackages.size} selected"
+                },
+                style = TextStyle(fontSize = 13.sp),
+                color = palette.textSecondary,
+            )
+            Text(
+                text = " ›",
+                style = TextStyle(fontSize = 15.sp),
+                color = palette.textFaint,
+                modifier = Modifier.padding(start = 4.dp),
+            )
+        }
 
         SwitchRow(
             title = "Quick reply",
@@ -144,10 +166,6 @@ fun NotificationSettingsSection(
                 "floating window appears is decided by Android and the source " +
                 "app — see About → limitations.",
         )
-    }
-
-    if (installedApps.isNotEmpty()) {
-        NoteText("Apps seen with active notifications: ${installedApps.size}.")
     }
 
     NoteText(

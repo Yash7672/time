@@ -7,10 +7,8 @@ import android.provider.Settings
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -344,71 +342,75 @@ private fun LandscapeContent(
 ) {
     val context = LocalContext.current
     Box(modifier = Modifier.fillMaxSize()) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
                 .padding(horizontal = 24.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // Centre: the time, with the date beneath it.
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .weight(1f)
-                    .graphicsLayer {
-                        translationX = drift.x * density
-                        translationY = drift.y * density
-                    },
+            Spacer(Modifier.weight(1f))
+
+            // CENTRE: the time, then the date beneath it; the whole block
+            // drifts together for burn-in protection.
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.graphicsLayer {
+                    translationX = drift.x * density
+                    translationY = drift.y * density
+                },
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    ClockView(
-                        time = com.chronos.clock.core.utils.TimeUtils.formatClock(
-                            epochMillis = now,
-                            use24Hour = settings.clock.use24Hour,
-                            showSeconds = settings.clock.showSeconds,
-                        ),
+                ClockView(
+                    time = com.chronos.clock.core.utils.TimeUtils.formatClock(
+                        epochMillis = now,
+                        use24Hour = settings.clock.use24Hour,
+                        showSeconds = settings.clock.showSeconds,
+                    ),
+                    settings = settings.clock,
+                    minimal = settings.theme.minimalClockMode,
+                    reduceAnimations = settings.performance.reduceAnimations ||
+                        settings.performance.batterySaver,
+                    clockColor = settings.theme.clockColor.argb?.let { Color(it) },
+                )
+
+                if (settings.clock.showDate || settings.clock.showDay) {
+                    DateView(
+                        nowMillis = now,
                         settings = settings.clock,
-                        minimal = settings.theme.minimalClockMode,
-                        reduceAnimations = settings.performance.reduceAnimations ||
-                            settings.performance.batterySaver,
-                        clockColor = settings.theme.clockColor.argb?.let { Color(it) },
+                        modifier = Modifier.padding(top = 8.dp),
                     )
-
-                    if (settings.clock.showDate || settings.clock.showDay) {
-                        DateView(
-                            nowMillis = now,
-                            settings = settings.clock,
-                            modifier = Modifier.padding(top = 8.dp),
-                        )
-                    }
-
-                    // BOTTOM of the centre block: notification app icons,
-                    // or the grant prompt while access is missing.
-                    if (accessGranted) {
-                        NotificationIconsRow(
-                            groups = groups,
-                            settings = settings.notifications,
-                            loadIcon = { viewModel.loadIcon(it)?.asImageBitmap() },
-                            onOpen = { viewModel.openAppMultiWindow(it) },
-                            onDismiss = { viewModel.dismissNotification(it) },
-                            onReply = { group, text -> viewModel.replyToNotification(group, text) },
-                            modifier = Modifier.padding(top = 12.dp),
-                        )
-                        if (groups.isEmpty() &&
-                            settings.notifications.showAppIcons &&
-                            settings.notifications.integrationEnabled
-                        ) {
-                            NotificationListeningStatus(Modifier.padding(top = 4.dp))
-                        }
-                    } else {
-                        NotificationAccessHint(
-                            onClick = { openNotificationAccess(context) },
-                            modifier = Modifier.padding(top = 12.dp),
-                        )
-                    }
                 }
             }
+
+            Spacer(Modifier.weight(1f))
+
+            // BOTTOM of the screen: notification app icons — never tucked
+            // under the date. While access is missing, the grant prompt
+            // sits in the same bottom lane instead.
+            if (accessGranted) {
+                NotificationIconsRow(
+                    groups = groups,
+                    settings = settings.notifications,
+                    loadIcon = { viewModel.loadIcon(it)?.asImageBitmap() },
+                    onOpen = { viewModel.openAppMultiWindow(it) },
+                    onDismiss = { viewModel.dismissNotification(it) },
+                    onReply = { group, text -> viewModel.replyToNotification(group, text) },
+                    modifier = Modifier.padding(bottom = 4.dp),
+                )
+                if (groups.isEmpty() &&
+                    settings.notifications.showAppIcons &&
+                    settings.notifications.integrationEnabled
+                ) {
+                    NotificationListeningStatus(Modifier.padding(bottom = 4.dp))
+                }
+            } else {
+                NotificationAccessHint(
+                    onClick = { openNotificationAccess(context) },
+                    modifier = Modifier.padding(bottom = 4.dp),
+                )
+            }
+
+            Spacer(Modifier.height(56.dp)) // reserved lane for the gear
         }
 
         SettingsButton(

@@ -83,6 +83,11 @@ fun SettingsScreen(
                     s.copy(notifications = s.notifications.copy(allowedPackages = next))
                 }
             },
+            onClearSelection = {
+                viewModel.updateSettings { s ->
+                    s.copy(notifications = s.notifications.copy(allowedPackages = emptySet()))
+                }
+            },
         )
         return
     }
@@ -148,7 +153,6 @@ fun SettingsScreen(
                 NotificationSettingsSection(
                     settings = settings.notifications,
                     accessGranted = accessGranted,
-                    installedApps = installedApps.filter { it.selected },
                     onChange = { newNotif ->
                         viewModel.updateSettings { it.copy(notifications = newNotif) }
                     },
@@ -177,7 +181,7 @@ fun SettingsScreen(
     }
 }
 
-/** Loads launchable apps for the picker (label + package, no icons). */
+/** Loads launchable apps for the picker, sorted by visible app name. */
 private fun queryLaunchableApps(
     context: android.content.Context,
     selected: Set<String>,
@@ -186,10 +190,8 @@ private fun queryLaunchableApps(
         .addCategory(android.content.Intent.CATEGORY_LAUNCHER)
     return try {
         context.packageManager.queryIntentActivities(intent, 0)
-            .map { it.activityInfo.packageName }
-            .distinct()
-            .sortedBy { it.lowercase() }
-            .mapNotNull { pkg ->
+            .mapNotNull { info ->
+                val pkg = info.activityInfo.packageName
                 val label = try {
                     context.packageManager.getApplicationLabel(
                         context.packageManager.getApplicationInfo(pkg, 0),
@@ -197,6 +199,11 @@ private fun queryLaunchableApps(
                 } catch (_: Exception) {
                     return@mapNotNull null
                 }
+                pkg to label
+            }
+            .distinctBy { it.first }
+            .sortedBy { it.second.lowercase() }
+            .map { (pkg, label) ->
                 AppEntry(packageName = pkg, label = label, selected = pkg in selected)
             }
     } catch (_: Exception) {
