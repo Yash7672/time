@@ -65,7 +65,8 @@ All three keep clock accuracy independent of visual effects.
 - Optional **notification-listener** integration: shows one original app icon
   per app along the bottom of the clock screen with an unread dot/count.
   Tap an icon to open that app beside CHRONOS in **multi-window (split
-  screen)**; long-press dismisses the notification. The integration setting
+  screen)**; long-press opens the quick-reply sheet (or dismisses the
+  notification when the app offers no reply action). The integration setting
   itself is **on by default** — the only thing Android requires is the
   notification-access grant, which CHRONOS can never give itself.
 - Access is requested **only** via Android's own consent screen — CHRONOS
@@ -77,9 +78,11 @@ All three keep clock accuracy independent of visual effects.
 - Deduplicated by Android key, group summaries collapsed into children, bounded
   to 50 entries / 8 visible icons.
 - **Quick reply** via the source app's own `RemoteInput` action (long-press an
-  icon) — the officially supported Android mechanism.
-- **Bubbles**: CHRONOS forwards the source notification's bubble intent when the
-  app provides one. See limitations below.
+  icon → reply sheet with Send / Dismiss) — the officially supported Android
+  mechanism.
+- **Bubbles**: if an app cannot be launched normally, CHRONOS falls back to the
+  source notification's own bubble/content handle (the *Prefer bubbles* switch
+  in Settings decides). See limitations below.
 
 ### Settings (persisted with Jetpack DataStore)
 1. **Clock** — format, seconds, date, day, size, brightness

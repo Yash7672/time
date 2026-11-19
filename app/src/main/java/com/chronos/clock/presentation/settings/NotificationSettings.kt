@@ -130,16 +130,19 @@ fun NotificationSettingsSection(
             checked = settings.quickReplyEnabled,
             onCheckedChange = { onChange(settings.copy(quickReplyEnabled = it)) },
             description = "Long-press an icon to reply through the source app's " +
-                "own Android RemoteInput (WhatsApp, Telegram, etc.).",
+                "own Android RemoteInput (WhatsApp, Telegram, etc.) — the same " +
+                "dialog also offers Dismiss. Falls back to a plain dismiss when " +
+                "the notification has no reply action.",
         )
 
         SwitchRow(
             title = "Prefer bubbles when available",
             checked = settings.bubblesEnabled,
             onCheckedChange = { onChange(settings.copy(bubblesEnabled = it)) },
-            description = "Uses the source notification's bubble intent if the " +
-                "app provides one. Whether a floating window appears is decided " +
-                "by Android and the source app — see About → limitations.",
+            description = "When an app cannot be launched normally, open its " +
+                "notification's own bubble/content handle instead. Whether a " +
+                "floating window appears is decided by Android and the source " +
+                "app — see About → limitations.",
         )
     }
 

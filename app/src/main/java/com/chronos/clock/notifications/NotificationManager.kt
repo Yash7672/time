@@ -4,7 +4,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import com.chronos.clock.domain.model.NotificationItem
-import com.chronos.clock.domain.model.NotificationSettings
 
 /**
  * Facade the UI uses for notification interactions. All operations are
@@ -20,8 +19,6 @@ class NotificationManager(
     val items get() = repository.items
     val groups get() = repository.groups
     val settings get() = repository.settings
-
-    fun updateSettings(settings: NotificationSettings) = repository.updateSettings(settings)
 
     fun onPosted(item: NotificationItem) = repository.onPosted(item)
 
@@ -96,8 +93,9 @@ class NotificationManager(
                 }
             }
         }
-        // No launcher entry (rare): fall back to the notification's own handle.
-        return open(item, useBubbles = false)
+        // No launcher entry (rare): fall back to the notification's own
+        // handle — bubble intent first when the user prefers bubbles.
+        return open(item, useBubbles = repository.settings.value.bubblesEnabled)
     }
 
     /** Dismiss through the listener service; only possible with granted access. */

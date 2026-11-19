@@ -125,13 +125,11 @@ class HomeViewModel(
     fun updateSettings(transform: (AppSettings) -> AppSettings) {
         viewModelScope.launch {
             settingsRepository.update(transform)
-            // Keep notification projections in sync with the new preferences.
-            notifications.updateSettings(settings.value.notifications)
+            // No direct push into the notification store here: AppContainer
+            // mirrors every persisted change via its collector. Pushing
+            // settings.value directly could race that collector and write a
+            // stale snapshot back.
         }
-    }
-
-    fun openNotification(group: NotificationGroup) {
-        notifications.open(group.latest, settings.value.notifications.bubblesEnabled)
     }
 
     /** Opens the app in a multi-window (split-screen) window beside CHRONOS. */

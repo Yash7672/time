@@ -4,8 +4,6 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.net.Uri
 import android.provider.Settings
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,8 +40,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.chronos.clock.core.constants.AppConstants
 import com.chronos.clock.core.permissions.PermissionHelper
-import com.chronos.clock.domain.model.AmoledMode
-import com.chronos.clock.domain.model.NotificationPrivacy
 import com.chronos.clock.presentation.background.StarFieldCanvas
 import com.chronos.clock.presentation.theme.Chronos
 import kotlin.math.roundToInt
@@ -279,8 +275,9 @@ private fun PortraitContent(
             Spacer(Modifier.weight(1f))
 
             // BOTTOM: notification app icons — tap opens the app beside
-            // CHRONOS in multi-window, long-press dismisses. While access is
-            // missing, a bottom-centre prompt offers the grant path instead.
+            // CHRONOS in multi-window; long-press replies (or dismisses).
+            // While access is missing, a bottom-centre prompt offers the
+            // grant path instead.
             if (accessGranted) {
                 NotificationIconsRow(
                     groups = groups,
@@ -288,6 +285,7 @@ private fun PortraitContent(
                     loadIcon = { viewModel.loadIcon(it)?.asImageBitmap() },
                     onOpen = { viewModel.openAppMultiWindow(it) },
                     onDismiss = { viewModel.dismissNotification(it) },
+                    onReply = { group, text -> viewModel.replyToNotification(group, text) },
                     modifier = Modifier.padding(bottom = 6.dp),
                 )
             } else {
@@ -372,6 +370,7 @@ private fun LandscapeContent(
                             loadIcon = { viewModel.loadIcon(it)?.asImageBitmap() },
                             onOpen = { viewModel.openAppMultiWindow(it) },
                             onDismiss = { viewModel.dismissNotification(it) },
+                            onReply = { group, text -> viewModel.replyToNotification(group, text) },
                             modifier = Modifier.padding(top = 12.dp),
                         )
                     } else {

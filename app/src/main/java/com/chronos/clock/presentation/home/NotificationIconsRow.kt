@@ -16,8 +16,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -27,14 +29,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.chronos.clock.core.constants.AppConstants
 import com.chronos.clock.domain.model.NotificationGroup
 import com.chronos.clock.domain.model.NotificationSettings
@@ -47,8 +53,10 @@ import com.chronos.clock.presentation.theme.Chronos
  *   app's notification icon; CHRONOS never tries).
  * - One icon per app with an unread count indicator — this keeps multiple
  *   notifications organised and guarantees no overlap with the clock.
- * - Tap opens the app beside CHRONOS in multi-window (split screen);
- *   long-press dismisses that notification.
+ * - Tap opens the app beside CHRONOS in multi-window (split screen).
+ * - Long-press opens the reply dialog when quick reply is on and the
+ *   notification supports RemoteInput (Dismiss lives in the same dialog);
+ *   otherwise long-press dismisses the notification directly.
  * - Bounded to [AppConstants.MAX_VISIBLE_ICONS] entries plus a "+N" chip.
  * - AMOLED friendly: dim circular backdrops, no bright surfaces.
  */
@@ -60,10 +68,14 @@ fun NotificationIconsRow(
     loadIcon: suspend (String) -> ImageBitmap?,
     onOpen: (NotificationGroup) -> Unit,
     onDismiss: (NotificationGroup) -> Unit,
+    onReply: (NotificationGroup, String) -> Boolean,
     modifier: Modifier = Modifier,
 ) {
     if (!settings.showAppIcons || groups.isEmpty()) return
     val palette = Chronos.palette
+
+    // Which icon's reply dialog is open (null = none).
+    var replyTarget by remember { mutableStateOf<NotificationGroup?>(null) }
 
     val visible = groups.take(AppConstants.MAX_VISIBLE_ICONS)
     val overflow = groups.size - visible.size
@@ -81,7 +93,13 @@ fun NotificationIconsRow(
                 settings = settings,
                 loadIcon = loadIcon,
                 onOpen = onOpen,
-                onDismiss = onDismiss,
+                onLongClick = {
+                    if (settings.quickReplyEnabled && group.latest.canReply) {
+                        replyTarget = group
+                    } else {
+                        onDismiss(group)
+                    }
+                },
             )
             Spacer(Modifier.width(8.dp))
         }
@@ -104,6 +122,22 @@ fun NotificationIconsRow(
             }
         }
     }
+
+    replyTarget?.let { target ->
+        ReplyDialog(
+            group = target,
+            onSend = { text ->
+                val sent = onReply(target, text)
+                if (sent) replyTarget = null
+                sent
+            },
+            onDismissNotification = {
+                onDismiss(target)
+                replyTarget = null
+            },
+            onClose = { replyTarget = null },
+        )
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -113,7 +147,7 @@ private fun NotificationIcon(
     settings: NotificationSettings,
     loadIcon: suspend (String) -> ImageBitmap?,
     onOpen: (NotificationGroup) -> Unit,
-    onDismiss: (NotificationGroup) -> Unit,
+    onLongClick: () -> Unit,
 ) {
     val palette = Chronos.palette
     var bitmap by remember(group.packageName) { mutableStateOf<ImageBitmap?>(null) }
@@ -133,7 +167,7 @@ private fun NotificationIcon(
                     .background(palette.surface)
                     .combinedClickable(
                         onClick = { onOpen(group) },
-                        onLongClick = { onDismiss(group) },
+                        onLongClick = onLongClick,
                     )
                     .padding(5.dp),
             ) {
@@ -236,5 +270,117 @@ fun NotificationAccessHint(
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 2.dp),
         )
+    }
+}
+
+/**
+ * AMOLED reply sheet: type and send through the source app's own
+ * RemoteInput (the officially supported Android mechanism), dismiss the
+ * notification, or cancel. Every colour comes from the palette — no
+ * default Material surfaces light up the panel.
+ */
+@Composable
+private fun ReplyDialog(
+    group: NotificationGroup,
+    onSend: (String) -> Boolean,
+    onDismissNotification: () -> Unit,
+    onClose: () -> Unit,
+) {
+    val palette = Chronos.palette
+    var text by remember { mutableStateOf("") }
+    val focusRequester = remember { FocusRequester() }
+
+    Dialog(onDismissRequest = onClose) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(palette.background)
+                .padding(18.dp),
+        ) {
+            Text(
+                text = group.appLabel,
+                color = palette.textPrimary,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+            )
+            val preview = group.latest.title ?: group.latest.text
+            if (preview != null) {
+                Text(
+                    text = preview,
+                    color = palette.textFaint,
+                    fontSize = 12.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
+
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 14.dp)
+                    .focusRequester(focusRequester),
+                placeholder = {
+                    Text(text = "Type a reply…", color = palette.textFaint, fontSize = 14.sp)
+                },
+                textStyle = TextStyle(color = palette.textPrimary, fontSize = 14.sp),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = palette.surface,
+                    unfocusedContainerColor = palette.surface,
+                    focusedIndicatorColor = palette.accent,
+                    unfocusedIndicatorColor = palette.surface,
+                    cursorColor = palette.accent,
+                ),
+                maxLines = 3,
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Dismiss",
+                    color = palette.textFaint,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable(onClick = onDismissNotification)
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                )
+                Spacer(Modifier.weight(1f))
+                Text(
+                    text = "Cancel",
+                    color = palette.textSecondary,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable(onClick = onClose)
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = "Send",
+                    color = if (text.isBlank()) palette.textFaint else palette.accent,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable(enabled = text.isNotBlank()) { onSend(text) }
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                )
+            }
+        }
+    }
+
+    // Focus the field so the keyboard is up as soon as the sheet appears.
+    LaunchedEffect(Unit) {
+        runCatching { focusRequester.requestFocus() }
     }
 }

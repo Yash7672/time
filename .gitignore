@@ -13,6 +13,9 @@ keystore.properties
 *.log
 ci-reports/
 
+# Local APK delivery copies (never commit binaries)
+apk/
+
 # IDE
 .idea/
 *.iml
