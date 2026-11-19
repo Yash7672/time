@@ -84,8 +84,12 @@ class NotificationManager(
         if (launch != null) {
             launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
-            // 1) Floating window over CHRONOS when the device has freeform.
-            if (supportsFreeform() && startFloating(launch)) return true
+            // 1) Floating window over CHRONOS when the device supports it
+            //    and the target app allows resizing (Android refuses to
+            //    float apps that declare themselves non-resizable).
+            if (supportsFreeform() && targetAllowsResize(launch) && startFloating(launch)) {
+                return true
+            }
 
             // 2) Split screen beside CHRONOS.
             launch.addFlags(Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT)
@@ -118,10 +122,37 @@ class NotificationManager(
     }
 
     /**
+     * True when the target activity allows itself to be resized — apps that
+     * declare `resizeableActivity=false` are refused by Android in both
+     * freeform and (older) split mode, so trying to float them would only
+     * produce a plain full-screen launch.
+     */
+    private fun targetAllowsResize(launch: Intent): Boolean = try {
+        val component = launch.component ?: return true
+        val info = appContext.packageManager.getActivityInfo(component, 0)
+        // ActivityInfo.resizeMode is hidden from the SDK: read it by
+        // reflection. RESIZE_MODE_UNRESIZEABLE == 0 (also the default for
+        // pre-N apps) means the app forbids resizing; anything else may be
+        // floated. If the field cannot be read, assume resizable — the
+        // attempt then degrades exactly like the plain bounds launch.
+        val mode = runCatching {
+            android.content.pm.ActivityInfo::class.java
+                .getField("resizeMode")
+                .getInt(info)
+        }.getOrDefault(2)
+        mode != 0
+    } catch (_: Exception) {
+        true
+    }
+
+    /**
      * Starts [launch] as a floating window covering ~78 % of the screen,
      * centred a little above the middle so CHRONOS stays visible around it.
-     * Returns false when the system refuses the bounds, so the caller can
-     * fall back to split screen.
+     *
+     * Sets the FREEFORM windowing mode explicitly (hidden API — reached by
+     * reflection, best-effort) and supplies bounds; together these are what
+     * the window manager needs to place the app on top of CHRONOS. Returns
+     * false when the system refuses, so the caller falls back to split.
      */
     private fun startFloating(launch: Intent): Boolean = try {
         val dm = appContext.resources.displayMetrics
@@ -130,7 +161,15 @@ class NotificationManager(
         val left = (dm.widthPixels - w) / 2
         val top = ((dm.heightPixels - h) * 0.36f).toInt()
         val options = ActivityOptions.makeBasic()
-            .setLaunchBounds(Rect(left, top, left + w, top + h))
+        // ActivityOptions.setLaunchWindowingMode(5 = WINDOWING_MODE_FREEFORM)
+        // is hidden from the public SDK; reflection is wrapped so a blocked
+        // call just falls back to bounds-only launching.
+        runCatching {
+            ActivityOptions::class.java
+                .getMethod("setLaunchWindowingMode", Integer.TYPE)
+                .invoke(options, 5)
+        }
+        options.setLaunchBounds(Rect(left, top, left + w, top + h))
         appContext.startActivity(launch, options.toBundle())
         true
     } catch (_: Exception) {

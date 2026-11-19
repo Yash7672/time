@@ -5,8 +5,12 @@ import android.provider.Settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -177,7 +181,7 @@ fun NotificationSettingsSection(
 /** Lightweight package descriptor for the app picker. */
 data class AppEntry(val packageName: String, val label: String, val selected: Boolean)
 
-/** Row used by the app picker screen. */
+/** Row used by the app picker screen — a real on/off switch per app. */
 @Composable
 fun AppPickerRow(entry: AppEntry, onToggle: () -> Unit) {
     val palette = Chronos.palette
@@ -185,15 +189,10 @@ fun AppPickerRow(entry: AppEntry, onToggle: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onToggle)
-            .padding(horizontal = 20.dp, vertical = 12.dp),
+            .padding(horizontal = 20.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = if (entry.selected) "●" else "○",
-            color = if (entry.selected) palette.accent else palette.textFaint,
-            style = TextStyle(fontSize = 13.sp),
-        )
-        Column(Modifier.padding(start = 12.dp)) {
+        Column(Modifier.weight(1f)) {
             Text(
                 text = entry.label,
                 color = if (entry.selected) palette.textPrimary else palette.textSecondary,
@@ -203,7 +202,20 @@ fun AppPickerRow(entry: AppEntry, onToggle: () -> Unit) {
                 text = entry.packageName,
                 color = palette.textFaint,
                 style = TextStyle(fontSize = 11.sp),
+                modifier = Modifier.padding(top = 1.dp),
             )
         }
+        Spacer(Modifier.width(12.dp))
+        Switch(
+            checked = entry.selected,
+            onCheckedChange = { onToggle() },
+            colors = SwitchDefaults.colors(
+                checkedTrackColor = palette.accent,
+                checkedThumbColor = if (palette.isLight) palette.background else palette.textPrimary,
+                uncheckedTrackColor = palette.surface,
+                uncheckedThumbColor = palette.textFaint,
+                uncheckedBorderColor = palette.surface,
+            ),
+        )
     }
 }

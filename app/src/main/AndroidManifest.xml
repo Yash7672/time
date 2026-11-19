@@ -22,12 +22,17 @@
         <!-- sensor = rotate with the device while THIS activity is open,
              regardless of the system rotation lock. The system rotation
              setting itself is never written, so the home screen and other
-             apps are unaffected when CHRONOS is closed. -->
+             apps are unaffected when CHRONOS is closed.
+             resizeableActivity is REQUIRED for the icon-tap launches to
+             float (freeform) or split: Android silently ignores
+             FLAG_ACTIVITY_LAUNCH_ADJACENT and freeform bounds for
+             activities that are not resizable. -->
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|density|uiMode|keyboardHidden"
             android:exported="true"
             android:launchMode="singleTask"
+            android:resizeableActivity="true"
             android:screenOrientation="sensor"
             android:theme="@style/Theme.Chronos">
             <intent-filter>

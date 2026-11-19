@@ -82,11 +82,11 @@ fun AppPickerScreen(
 
             Text(
                 text = if (anySelected) {
-                    "Only checked apps show on the clock. Uncheck everything " +
-                        "to return to all apps."
+                    "Only apps switched ON show on the clock. Turn every " +
+                        "switch off to return to all apps."
                 } else {
-                    "All apps are currently shown. Check apps to limit which " +
-                        "appear on the clock."
+                    "All apps currently show on the clock. Switch one or " +
+                        "more on to show only those."
                 },
                 style = TextStyle(fontSize = 12.sp, lineHeight = 17.sp),
                 color = palette.textFaint,
@@ -95,7 +95,7 @@ fun AppPickerScreen(
 
             if (anySelected) {
                 Text(
-                    text = "Clear selection — show all apps",
+                    text = "Turn all switches off — show every app",
                     style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium),
                     color = palette.accent,
                     modifier = Modifier
