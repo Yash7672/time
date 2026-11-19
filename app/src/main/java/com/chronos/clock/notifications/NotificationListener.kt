@@ -1,6 +1,8 @@
 package com.chronos.clock.notifications
 
 import android.app.Notification
+import android.content.ComponentName
+import android.content.Context
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import com.chronos.clock.ChronosApp
@@ -44,6 +46,10 @@ class NotificationListener : NotificationListenerService() {
     }
 
     private fun publish(sbn: StatusBarNotification) {
+        // Ongoing sessions (media, navigation, downloads, screen share) are
+        // states rather than messages — they would sit in the icon row
+        // forever and bury the apps the user actually cares about.
+        if (sbn.isOngoing) return
         val repo = repository ?: return
         val n = sbn.notification
         val extras = n.extras ?: return
@@ -98,6 +104,23 @@ class NotificationListener : NotificationListenerService() {
         @Volatile
         var active: NotificationListener? = null
             private set
+
+        /**
+         * Asks the system to (re)bind our listener right now.
+         *
+         * Some OEM builds delay or silently drop the binding after the grant
+         * is flipped (or after the system kills the process). A rebind always
+         * ends in [onListenerConnected], which backfills every notification
+         * currently on screen — so icons appear even for messages that
+         * arrived while CHRONOS was closed. Best-effort: never throws.
+         */
+        fun forceRebind(context: Context) {
+            runCatching {
+                NotificationListenerService.requestRebind(
+                    ComponentName(context, NotificationListener::class.java),
+                )
+            }
+        }
     }
 
     /** Dismiss a notification the way Android allows (requires listener access). */

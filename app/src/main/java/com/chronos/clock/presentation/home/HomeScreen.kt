@@ -40,6 +40,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.chronos.clock.core.constants.AppConstants
 import com.chronos.clock.core.permissions.PermissionHelper
+import com.chronos.clock.notifications.NotificationListener
 import com.chronos.clock.presentation.background.StarFieldCanvas
 import com.chronos.clock.presentation.theme.Chronos
 import kotlin.math.roundToInt
@@ -52,9 +53,10 @@ import kotlinx.coroutines.delay
  *   centre   → the clock (time), then the date beneath it — time first,
  *              date second, never overlapping
  *   bottom   → notification app icons (tap = open that app beside CHRONOS
- *              in multi-window, long-press = dismiss the notification), or
- *              a dim "allow notification access" prompt while the one
- *              required permission is missing
+ *              in multi-window, long-press = reply sheet or dismiss), a
+ *              faint "listening" line while access exists but nothing has
+ *              arrived, or a tappable "allow notification access" prompt
+ *              while the one required permission is missing
  *   bottom-L → settings gear (tap-to-reveal, auto-hide)
  *
  * Landscape mirrors the same order with tighter proportions.
@@ -84,22 +86,34 @@ fun HomeScreen(
     // system screen (or a later revocation) is reflected without reopening
     // Settings. refreshNotificationAccess also flips the feature on the first
     // time a grant is seen, so icons appear as soon as access exists.
+    // Additionally, whenever we don't yet have a live grant in memory (the
+    // moment access appears, and every app resume), the listener is force
+    // re-bound: OEM builds often drop or delay that binding while CHRONOS is
+    // closed, and a rebind backfills everything currently on screen — so
+    // icons show even for notifications that arrived while the app was shut.
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            var lastGranted: Boolean? = null
             while (true) {
                 viewModel.refreshNotificationAccess()
+                val granted = viewModel.notificationAccess.value
+                if (granted && lastGranted != true) {
+                    NotificationListener.forceRebind(context)
+                }
+                lastGranted = granted
                 delay(3_000)
             }
         }
     }
 
-    // ---- one-time guided grant -------------------------------------------
-    // First launch without access: jump straight to Android's consent screen
-    // so the single required allowance is one switch flip. Runs at most once
-    // per install; if declined, the bottom-centre hint stays as the manual
-    // path. Integration itself is ON by default — nothing else to enable.
+    // ---- guided grant: Android's consent screen on every launch -----------
+    // Android never lets an app grant itself notification access — the
+    // closest legal equivalent to "on by default" is opening Android's own
+    // consent screen on every launch until the grant exists (one switch
+    // flip). Once granted this never fires again; if declined, the
+    // bottom-centre hint remains as the manual path.
     LaunchedEffect(Unit) {
-        if (!accessGranted && PermissionHelper.consumeFirstConsentPrompt(context)) {
+        if (!PermissionHelper.hasNotificationAccess(context)) {
             delay(700) // let the clock render first — no abrupt jump
             openNotificationAccess(context)
         }
@@ -288,6 +302,14 @@ private fun PortraitContent(
                     onReply = { group, text -> viewModel.replyToNotification(group, text) },
                     modifier = Modifier.padding(bottom = 6.dp),
                 )
+                // Access exists but nothing has arrived yet: show that the
+                // pipeline is alive instead of an empty (broken-looking) area.
+                if (groups.isEmpty() &&
+                    settings.notifications.showAppIcons &&
+                    settings.notifications.integrationEnabled
+                ) {
+                    NotificationListeningStatus(Modifier.padding(bottom = 6.dp))
+                }
             } else {
                 NotificationAccessHint(
                     onClick = { openNotificationAccess(context) },
@@ -373,6 +395,12 @@ private fun LandscapeContent(
                             onReply = { group, text -> viewModel.replyToNotification(group, text) },
                             modifier = Modifier.padding(top = 12.dp),
                         )
+                        if (groups.isEmpty() &&
+                            settings.notifications.showAppIcons &&
+                            settings.notifications.integrationEnabled
+                        ) {
+                            NotificationListeningStatus(Modifier.padding(top = 4.dp))
+                        }
                     } else {
                         NotificationAccessHint(
                             onClick = { openNotificationAccess(context) },

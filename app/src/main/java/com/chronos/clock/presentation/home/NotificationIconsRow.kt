@@ -258,7 +258,7 @@ fun NotificationAccessHint(
     ) {
         Text(
             text = "Allow notification access",
-            color = palette.textSecondary,
+            color = palette.accent,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
             textAlign = TextAlign.Center,
@@ -271,6 +271,23 @@ fun NotificationAccessHint(
             modifier = Modifier.padding(top = 2.dp),
         )
     }
+}
+
+/**
+ * Bottom status shown while access exists but nothing has arrived yet —
+ * proves the pipeline is alive instead of looking broken, and disappears
+ * the moment the first icon renders.
+ */
+@Composable
+fun NotificationListeningStatus(modifier: Modifier = Modifier) {
+    val palette = Chronos.palette
+    Text(
+        text = "listening for notifications…",
+        color = palette.textFaint,
+        fontSize = 11.sp,
+        textAlign = TextAlign.Center,
+        modifier = modifier.padding(horizontal = 12.dp),
+    )
 }
 
 /**

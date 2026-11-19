@@ -70,9 +70,13 @@ All three keep clock accuracy independent of visual effects.
   itself is **on by default** — the only thing Android requires is the
   notification-access grant, which CHRONOS can never give itself.
 - Access is requested **only** via Android's own consent screen — CHRONOS
-  cannot and does not grant itself access. On the very first launch it opens
-  that screen once (one switch flip), and the bottom-centre prompt reopens it
-  any time the grant is missing; the feature then switches on automatically.
+  cannot and does not grant itself access. It opens that screen on **every
+  launch until you grant it** (one switch flip; after that it never appears
+  again), and the bottom-centre prompt reopens it any time the grant is
+  missing; the feature then switches on automatically. Whenever CHRONOS
+  opens with access granted it also re-binds the listener and backfills
+  whatever is currently on screen, so icons appear immediately — even for
+  notifications that arrived while the app was closed.
 - Notification content lives in **process memory only** — never written to disk,
   never uploaded (the APK declares **no internet permission**), cleared on exit.
 - Deduplicated by Android key, group summaries collapsed into children, bounded
