@@ -77,7 +77,14 @@ All three keep clock accuracy independent of visual effects.
   missing; the feature then switches on automatically. Whenever CHRONOS
   opens with access granted it also re-binds the listener and backfills
   whatever is currently on screen, so icons appear immediately — even for
-  notifications that arrived while the app was closed.
+  notifications that arrived while the app was closed. Every listener
+  callback is exception-guarded (one malformed notification from any app
+  can never take the service down), and if the system drops the binding
+  the listener asks to be re-bound by itself.
+- The bottom lane is **never silently empty**: whenever no icons render, a
+  status line says exactly why — *"App icons are off — tap to turn on"*,
+  *"Only N chosen apps allowed — tap to show all apps"*, or
+  *"listening for notifications…"* — with a one-tap fix where possible.
 - Notification content lives in **process memory only** — never written to disk,
   never uploaded (the APK declares **no internet permission**), cleared on exit.
 - Deduplicated by Android key, group summaries collapsed into children, bounded

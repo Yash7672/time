@@ -300,14 +300,14 @@ private fun PortraitContent(
                     onReply = { group, text -> viewModel.replyToNotification(group, text) },
                     modifier = Modifier.padding(bottom = 6.dp),
                 )
-                // Access exists but nothing has arrived yet: show that the
-                // pipeline is alive instead of an empty (broken-looking) area.
-                if (groups.isEmpty() &&
-                    settings.notifications.showAppIcons &&
-                    settings.notifications.integrationEnabled
-                ) {
-                    NotificationListeningStatus(Modifier.padding(bottom = 6.dp))
-                }
+                // Access exists but the lane is empty: explain why and
+                // offer a one-tap fix instead of silently showing nothing.
+                NotificationBottomStatus(
+                    settings = settings,
+                    groups = groups,
+                    viewModel = viewModel,
+                    modifier = Modifier.padding(bottom = 6.dp),
+                )
             } else {
                 NotificationAccessHint(
                     onClick = { openNotificationAccess(context) },
@@ -397,12 +397,12 @@ private fun LandscapeContent(
                     onReply = { group, text -> viewModel.replyToNotification(group, text) },
                     modifier = Modifier.padding(bottom = 4.dp),
                 )
-                if (groups.isEmpty() &&
-                    settings.notifications.showAppIcons &&
-                    settings.notifications.integrationEnabled
-                ) {
-                    NotificationListeningStatus(Modifier.padding(bottom = 4.dp))
-                }
+                NotificationBottomStatus(
+                    settings = settings,
+                    groups = groups,
+                    viewModel = viewModel,
+                    modifier = Modifier.padding(bottom = 4.dp),
+                )
             } else {
                 NotificationAccessHint(
                     onClick = { openNotificationAccess(context) },
@@ -421,6 +421,43 @@ private fun LandscapeContent(
                 .navigationBarsPadding(),
         )
     }
+}
+
+/**
+ * Bottom status lane shown under the icon row whenever no icons render:
+ * explains *why* the lane is empty (icons switched off / limited to chosen
+ * apps / still waiting) and offers a one-tap fix. An empty bottom lane with
+ * no explanation is indistinguishable from a broken feature — this line
+ * removes that ambiguity.
+ */
+@Composable
+private fun NotificationBottomStatus(
+    settings: com.chronos.clock.domain.model.AppSettings,
+    groups: List<com.chronos.clock.domain.model.NotificationGroup>,
+    viewModel: HomeViewModel,
+    modifier: Modifier = Modifier,
+) {
+    if (groups.isNotEmpty()) return // icons are rendering — no status needed
+    NotificationStatusLine(
+        settings = settings.notifications,
+        groupCount = groups.size,
+        onEnableIcons = {
+            viewModel.updateSettings { s ->
+                s.copy(
+                    notifications = s.notifications.copy(
+                        integrationEnabled = true,
+                        showAppIcons = true,
+                    ),
+                )
+            }
+        },
+        onShowAllApps = {
+            viewModel.updateSettings { s ->
+                s.copy(notifications = s.notifications.copy(allowedPackages = emptySet()))
+            }
+        },
+        modifier = modifier,
+    )
 }
 
 /**

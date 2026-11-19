@@ -274,19 +274,47 @@ fun NotificationAccessHint(
 }
 
 /**
- * Bottom status shown while access exists but nothing has arrived yet —
- * proves the pipeline is alive instead of looking broken, and disappears
- * the moment the first icon renders.
+ * Bottom status/diagnosis line shown whenever the icon row itself is not:
+ *
+ *  - feature switched off → accent line, one tap re-enables icons;
+ *  - limited to chosen apps with none of them active → one tap returns
+ *    to showing every app;
+ *  - otherwise → faint "listening" line proving the pipeline is alive.
+ *
+ * It disappears the moment the first icon renders, so the bottom lane can
+ * never be silently empty while something is wrong — the line always says
+ * exactly why, and how to fix it in one tap.
  */
 @Composable
-fun NotificationListeningStatus(modifier: Modifier = Modifier) {
+fun NotificationStatusLine(
+    settings: NotificationSettings,
+    groupCount: Int,
+    onEnableIcons: () -> Unit,
+    onShowAllApps: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val palette = Chronos.palette
+    val status: Triple<String, Boolean, (() -> Unit)?> = when {
+        !settings.integrationEnabled || !settings.showAppIcons ->
+            Triple("App icons are off — tap to turn on", true, onEnableIcons)
+        settings.allowedPackages.isNotEmpty() && groupCount == 0 ->
+            Triple(
+                "Only ${settings.allowedPackages.size} chosen app(s) allowed — tap to show all apps",
+                false,
+                onShowAllApps,
+            )
+        else -> Triple("listening for notifications…", false, null)
+    }
+    val (text, accent, onTap) = status
     Text(
-        text = "listening for notifications…",
-        color = palette.textFaint,
+        text = text,
+        color = if (accent) palette.accent else palette.textFaint,
         fontSize = 11.sp,
         textAlign = TextAlign.Center,
-        modifier = modifier.padding(horizontal = 12.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .then(if (onTap != null) Modifier.clickable(onClick = onTap) else Modifier)
+            .padding(horizontal = 16.dp, vertical = 4.dp),
     )
 }
 
