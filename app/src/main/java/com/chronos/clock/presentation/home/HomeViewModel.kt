@@ -209,11 +209,26 @@ class HomeViewModel(
     }
 
     fun dismissNotification(group: NotificationGroup) {
-        notifications.dismiss(group.latest)
+        // "Ignore this app": clear every notification it currently has —
+        // the icon stands for the whole app, not just its newest line.
+        val targets = group.items.ifEmpty { listOf(group.latest) }
+        targets.forEach { notifications.dismiss(it) }
     }
 
-    fun replyToNotification(group: NotificationGroup, text: String): Boolean =
-        notifications.reply(group.latest, text)
+    fun replyToNotification(group: NotificationGroup, text: String): Boolean {
+        // Reply to the newest notification that actually offers RemoteInput:
+        // the newest overall may be a second, action-less notification
+        // (WhatsApp often keeps one), which would make the reply a no-op.
+        val target = group.items.firstOrNull { it.canReply } ?: group.latest
+        val sent = notifications.reply(target, text)
+        if (sent) {
+            // The text went out through the app's own handle as a normal
+            // message — drop the answered notification so no stale "unseen"
+            // line keeps tagging along in CHRONOS.
+            notifications.dismiss(target)
+        }
+        return sent
+    }
 
     suspend fun loadIcon(packageName: String): android.graphics.Bitmap? =
         notifications.loadIcon(packageName)

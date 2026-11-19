@@ -68,9 +68,11 @@ All three keep clock accuracy independent of visual effects.
   attempts the **native Small Window** automatically (the real floating
   window on Funtouch OS), on freeform-capable devices a floating
   `setLaunchBounds` window, otherwise **split screen** beside it;
-  long-press opens the quick-reply sheet, which shows the sender and
-  message you are replying to (or dismisses the notification when the app
-  offers no reply action). The integration setting
+  long-press opens the quick-reply sheet, which lists **all** the app's
+  last unseen messages (sender, text, time — updating live while the
+  sheet is open; or dismisses the notifications when the app offers no
+  reply action), and **swiping an icon down** ignores that app — it
+  clears all of its notifications. The integration setting
   itself is **on by default** — the only thing Android requires is the
   notification-access grant, which CHRONOS can never give itself.
 - Access is requested **only** via Android's own consent screen — CHRONOS

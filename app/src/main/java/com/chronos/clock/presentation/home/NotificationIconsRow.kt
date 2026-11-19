@@ -1,10 +1,12 @@
 package com.chronos.clock.presentation.home
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -37,6 +40,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.AnnotatedString
@@ -47,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -57,6 +62,7 @@ import com.chronos.clock.notifications.FloatingAppLauncher
 import com.chronos.clock.presentation.theme.Chronos
 import java.text.SimpleDateFormat
 import java.util.Locale
+import kotlin.math.roundToInt
 
 /**
  * Notification app icons shown along the bottom of the clock screen.
@@ -71,6 +77,8 @@ import java.util.Locale
  *   notifications expand into every message) — when quick reply is on
  *   and the notification supports RemoteInput (Dismiss lives in the same
  *   dialog); otherwise long-press dismisses the notification directly.
+ * - Swipe an icon **down** past the threshold to ignore that app — it
+ *   clears all of that app's notifications (tap and long-press unchanged).
  * - Bounded to [AppConstants.MAX_VISIBLE_ICONS] entries plus a "+N" chip.
  * - AMOLED friendly: dim circular backdrops, no bright surfaces.
  */
@@ -88,8 +96,15 @@ fun NotificationIconsRow(
     if (!settings.showAppIcons || groups.isEmpty()) return
     val palette = Chronos.palette
 
-    // Which icon's reply dialog is open (null = none).
-    var replyTarget by remember { mutableStateOf<NotificationGroup?>(null) }
+    // Which app's reply dialog is open (null = none). Keyed by package and
+    // resolved against the LIVE list on every recomposition, so messages
+    // arriving while the sheet is open appear in it immediately.
+    var replyPackage by remember { mutableStateOf<String?>(null) }
+    val replyTarget = replyPackage?.let { pkg ->
+        groups.firstOrNull { it.packageName == pkg }
+            // The sheet only exists while something can be replied to.
+            ?.takeIf { g -> g.items.any { item -> item.canReply } }
+    }
 
     val visible = groups.take(AppConstants.MAX_VISIBLE_ICONS)
     val overflow = groups.size - visible.size
@@ -108,12 +123,18 @@ fun NotificationIconsRow(
                 loadIcon = loadIcon,
                 onOpen = onOpen,
                 onLongClick = {
-                    if (settings.quickReplyEnabled && group.latest.canReply) {
-                        replyTarget = group
+                    // Reply when ANY active notification of the app can
+                    // take it — the newest one may be action-less (WhatsApp
+                    // often keeps a second, non-replyable notification).
+                    if (settings.quickReplyEnabled &&
+                        group.items.any { it.canReply }
+                    ) {
+                        replyPackage = group.packageName
                     } else {
                         onDismiss(group)
                     }
                 },
+                onSwipeDismiss = { onDismiss(group) },
             )
             Spacer(Modifier.width(8.dp))
         }
@@ -142,14 +163,14 @@ fun NotificationIconsRow(
             group = target,
             onSend = { text ->
                 val sent = onReply(target, text)
-                if (sent) replyTarget = null
+                if (sent) replyPackage = null
                 sent
             },
             onDismissNotification = {
                 onDismiss(target)
-                replyTarget = null
+                replyPackage = null
             },
-            onClose = { replyTarget = null },
+            onClose = { replyPackage = null },
         )
     }
 }
@@ -162,16 +183,38 @@ private fun NotificationIcon(
     loadIcon: suspend (String) -> ImageBitmap?,
     onOpen: (NotificationGroup) -> Unit,
     onLongClick: () -> Unit,
+    onSwipeDismiss: () -> Unit,
 ) {
     val palette = Chronos.palette
     var bitmap by remember(group.packageName) { mutableStateOf<ImageBitmap?>(null) }
+    // Swipe-down-to-ignore: how far the icon has followed the finger.
+    var dragY by remember { mutableStateOf(0f) }
+    val animatedY by animateFloatAsState(dragY, label = "iconDrag")
 
     // Load off the main thread; result cached by the repository.
     LaunchedEffect(group.packageName) {
         bitmap = loadIcon(group.packageName)
     }
 
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            // Drag down past the threshold to ignore this app's
+            // notifications — tap and long-press stay untouched.
+            .pointerInput(group.packageName) {
+                detectVerticalDragGestures(
+                    onDragEnd = {
+                        if (dragY >= 26.dp.toPx()) onSwipeDismiss()
+                        dragY = 0f
+                    },
+                    onDragCancel = { dragY = 0f },
+                    onVerticalDrag = { _, amount ->
+                        dragY = (dragY + amount).coerceAtLeast(0f)
+                    },
+                )
+            }
+            .offset { IntOffset(0, animatedY.roundToInt()) },
+    ) {
         Box(contentAlignment = Alignment.TopEnd) {
             Box(
                 contentAlignment = Alignment.Center,
@@ -394,7 +437,7 @@ private fun ReplyDialog(
     // rows on screen, so even very long histories stay cheap.
     val rows = remember(group) { buildUnseenMessages(group) }
     val listState = rememberLazyListState()
-    val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+    val timeFormat = remember { SimpleDateFormat("hh:mm a", Locale.getDefault()) }
     val screenHeightDp = LocalConfiguration.current.screenHeightDp
 
     // Open at the newest message — that is what you are replying to;
