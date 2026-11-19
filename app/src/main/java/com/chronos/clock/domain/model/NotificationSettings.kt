@@ -29,6 +29,31 @@ data class NotificationSettings(
      * app's control — see README "Known Android limitations".
      */
     val bubblesEnabled: Boolean = true,
+
+    // ——— Settings → Notifications → Floating App Windows ———
+    /**
+     * Master switch for opening tapped apps in a real Android freeform
+     * (floating) window over CHRONOS. Availability is decided by the device
+     * build and the target app's resize declaration — CHRONOS never forces it.
+     */
+    val floatingWindowsEnabled: Boolean = true,
+    /**
+     * ON  → try the floating window first, then split screen.
+     * OFF → split screen first; the floating window only if split is refused.
+     */
+    val preferFloatingWindows: Boolean = true,
+    /**
+     * When neither floating nor split screen worked, allow a plain
+     * full-screen launch. OFF = never launch full-screen — only the source
+     * app's official notification bubble may still open.
+     */
+    val allowFullScreenFallback: Boolean = true,
+    /**
+     * Explain, after a tap, when the device or app blocks floating windows:
+     * what opened instead and where floating windows can be enabled on
+     * devices that offer the option. OFF = fail silently.
+     */
+    val showFloatingInstructions: Boolean = true,
 )
 
 enum class NotificationPrivacy(val label: String) {

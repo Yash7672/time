@@ -73,6 +73,7 @@ fun HomeScreen(
     val now by viewModel.now.collectAsStateWithLifecycle()
     val groups by viewModel.notificationGroups.collectAsStateWithLifecycle()
     val accessGranted by viewModel.notificationAccess.collectAsStateWithLifecycle()
+    val floatingNotice by viewModel.floatingNotice.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -228,6 +229,16 @@ fun HomeScreen(
                 gearVisible = gearVisible,
             )
         }
+    }
+
+    // Explain a floating-window launch that could not engage (device or
+    // app limitation), or a tap that opened nothing. Never blocks the
+    // clock; dismissible; only shown when the settings ask for it.
+    floatingNotice?.let { notice ->
+        FloatingWindowNoticeDialog(
+            notice = notice,
+            onDismiss = viewModel::dismissFloatingNotice,
+        )
     }
 }
 

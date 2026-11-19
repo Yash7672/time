@@ -66,6 +66,10 @@ class SettingsDataStore(
         val NOTIF_PRIVACY = stringPreferencesKey("notif_privacy")
         val NOTIF_QUICK_REPLY = booleanPreferencesKey("notif_quick_reply")
         val NOTIF_BUBBLES = booleanPreferencesKey("notif_bubbles")
+        val NOTIF_FLOATING = booleanPreferencesKey("notif_floating_windows")
+        val NOTIF_FLOATING_PREFER = booleanPreferencesKey("notif_floating_prefer")
+        val NOTIF_FLOATING_FULLSCREEN = booleanPreferencesKey("notif_floating_fullscreen")
+        val NOTIF_FLOATING_INSTRUCTIONS = booleanPreferencesKey("notif_floating_instructions")
 
         val KEEP_AWAKE = booleanPreferencesKey("keep_screen_awake")
         val FULLSCREEN = booleanPreferencesKey("fullscreen_mode")
@@ -156,6 +160,22 @@ class SettingsDataStore(
                     ),
                     quickReplyEnabled = bool(Keys.NOTIF_QUICK_REPLY, defaults.notifications.quickReplyEnabled),
                     bubblesEnabled = bool(Keys.NOTIF_BUBBLES, defaults.notifications.bubblesEnabled),
+                    floatingWindowsEnabled = bool(
+                        Keys.NOTIF_FLOATING,
+                        defaults.notifications.floatingWindowsEnabled,
+                    ),
+                    preferFloatingWindows = bool(
+                        Keys.NOTIF_FLOATING_PREFER,
+                        defaults.notifications.preferFloatingWindows,
+                    ),
+                    allowFullScreenFallback = bool(
+                        Keys.NOTIF_FLOATING_FULLSCREEN,
+                        defaults.notifications.allowFullScreenFallback,
+                    ),
+                    showFloatingInstructions = bool(
+                        Keys.NOTIF_FLOATING_INSTRUCTIONS,
+                        defaults.notifications.showFloatingInstructions,
+                    ),
                 ),
                 display = DisplaySettings(
                     keepScreenAwake = bool(Keys.KEEP_AWAKE, defaults.display.keepScreenAwake),
@@ -222,6 +242,10 @@ class SettingsDataStore(
             putEnum(Keys.NOTIF_PRIVACY, no.privacy, nn.privacy)
             putBool(Keys.NOTIF_QUICK_REPLY, no.quickReplyEnabled, nn.quickReplyEnabled)
             putBool(Keys.NOTIF_BUBBLES, no.bubblesEnabled, nn.bubblesEnabled)
+            putBool(Keys.NOTIF_FLOATING, no.floatingWindowsEnabled, nn.floatingWindowsEnabled)
+            putBool(Keys.NOTIF_FLOATING_PREFER, no.preferFloatingWindows, nn.preferFloatingWindows)
+            putBool(Keys.NOTIF_FLOATING_FULLSCREEN, no.allowFullScreenFallback, nn.allowFullScreenFallback)
+            putBool(Keys.NOTIF_FLOATING_INSTRUCTIONS, no.showFloatingInstructions, nn.showFloatingInstructions)
 
             val d = current.display
             val nd = next.display

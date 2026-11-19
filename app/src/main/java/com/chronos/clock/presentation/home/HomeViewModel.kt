@@ -8,6 +8,7 @@ import com.chronos.clock.core.lifecycle.ClockTicker
 import com.chronos.clock.domain.model.AppSettings
 import com.chronos.clock.domain.model.NotificationGroup
 import com.chronos.clock.domain.repository.SettingsRepository
+import com.chronos.clock.notifications.FloatingAppLauncher
 import com.chronos.clock.notifications.NotificationManager
 import kotlin.math.abs
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -132,9 +133,48 @@ class HomeViewModel(
         }
     }
 
-    /** Opens the app in a multi-window (split-screen) window beside CHRONOS. */
+    /**
+     * User-facing explanation of a floating-window launch that could not
+     * engage (device or app limitation), or of a tap that opened nothing.
+     * `null` = nothing to explain. Shown as a dismissible dialog only when
+     * Settings → Floating App Windows → "Show instructions" is on.
+     */
+    data class FloatingWindowNotice(
+        val appLabel: String,
+        val outcome: FloatingAppLauncher.Outcome,
+        val floatBlockReason: FloatingAppLauncher.FloatBlockReason?,
+    )
+
+    /**
+     * Transient explanation for the last icon tap (see [FloatingWindowNotice]);
+     * `null` hides it. The clock keeps running behind the dialog.
+     */
+    private val _floatingNotice = MutableStateFlow<FloatingWindowNotice?>(null)
+    val floatingNotice: StateFlow<FloatingWindowNotice?> = _floatingNotice
+
+    fun dismissFloatingNotice() {
+        _floatingNotice.value = null
+    }
+
+    /**
+     * One tap on a notification icon: open the app on top of CHRONOS via
+     * [FloatingAppLauncher] (real freeform window → split → full-screen →
+     * notification handle) and, when floating could not engage or nothing
+     * opened, surface the honest explanation the settings ask for.
+     */
     fun openAppMultiWindow(group: NotificationGroup) {
-        notifications.openInMultiWindow(group.latest)
+        val notifSettings = settings.value.notifications
+        val result = notifications.openInMultiWindow(group.latest)
+        val blocked = result.floatBlockReason
+        if (notifSettings.showFloatingInstructions &&
+            (blocked != null || result.outcome == FloatingAppLauncher.Outcome.NONE)
+        ) {
+            _floatingNotice.value = FloatingWindowNotice(
+                appLabel = group.appLabel,
+                outcome = result.outcome,
+                floatBlockReason = blocked,
+            )
+        }
     }
 
     fun dismissNotification(group: NotificationGroup) {

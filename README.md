@@ -95,6 +95,18 @@ All three keep clock accuracy independent of visual effects.
 - **Bubbles**: if an app cannot be launched normally, CHRONOS falls back to the
   source notification's own bubble/content handle (the *Prefer bubbles* switch
   in Settings decides). See limitations below.
+- **Floating App Windows** (`FloatingAppLauncher`): tapping an icon asks
+  Android to open the app in a **real freeform window** over the clock —
+  explicit `WINDOWING_MODE_FREEFORM` + `ActivityOptions.setLaunchBounds`
+  (bounds alone never guarantee freeform), then **split screen**, then a
+  normal full-screen launch, then the notification's own handle. Every step
+  degrades to the next; CHRONOS itself never closes. The ladder is driven by
+  Settings → Notifications → Floating App Windows and is unit-tested
+  (`FloatingAppLauncherTest`). When floating cannot engage (device lacks
+  freeform support, or the target app declares itself non-resizable), an
+  honest dismissible dialog says what opened instead and, where the device
+  offers it, where the system's floating-window switch lives — switch that
+  notice off with *Show instructions for unsupported devices*.
 
 ### Settings (persisted with Jetpack DataStore)
 1. **Clock** — format, seconds, date, day, size, brightness
@@ -102,7 +114,9 @@ All three keep clock accuracy independent of visual effects.
    modes, burn-in drift, minimal clock, window brightness
 3. **Star background** — enable, density (Low/Med/High), speed, twinkle
 4. **Notifications** — access toggle, app selection, icons, indicators,
-   privacy mode, quick reply, bubbles
+   privacy mode, quick reply, bubbles, **floating app windows** (enable
+   floating-window launch, prefer floating when supported, allow normal
+   full-screen fallback, show instructions for unsupported devices)
 5. **Display** — auto brightness (light sensor), keep-awake, fullscreen
 6. **Performance** — battery saver, pause stars when idle (star throttling and
    low-fps rendering are automatic)
@@ -121,8 +135,11 @@ All three keep clock accuracy independent of visual effects.
 
 - **Floating windows / bubbles**: whether WhatsApp or any app appears as a
   bubble or floating window is controlled by **Android and that app**, not by
-  CHRONOS. CHRONOS can only forward the notification's own bubble/content
-  intent; it cannot force a third-party app into a floating window.
+  CHRONOS. CHRONOS attempts the officially supported route (freeform launch
+  options, split screen, the notification's own bubble/content intent) and
+  falls back to a normal launch — it cannot force a third-party app into a
+  floating window on devices that do not offer freeform windows, nor float
+  apps that declare themselves non-resizable.
 - **Notification icons**: Android does not allow one app to recolour or replace
   another app's notification icon. CHRONOS always shows the **original**
   application icon.

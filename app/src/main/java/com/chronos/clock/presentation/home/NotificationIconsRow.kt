@@ -44,6 +44,7 @@ import androidx.compose.ui.window.Dialog
 import com.chronos.clock.core.constants.AppConstants
 import com.chronos.clock.domain.model.NotificationGroup
 import com.chronos.clock.domain.model.NotificationSettings
+import com.chronos.clock.notifications.FloatingAppLauncher
 import com.chronos.clock.presentation.theme.Chronos
 
 /**
@@ -427,5 +428,114 @@ private fun ReplyDialog(
     // Focus the field so the keyboard is up as soon as the sheet appears.
     LaunchedEffect(Unit) {
         runCatching { focusRequester.requestFocus() }
+    }
+}
+
+/**
+ * Explains a floating-window launch that could not engage (or a tap that
+ * opened nothing). Android — not CHRONOS — decides whether freeform
+ * windows exist on this device and whether the target app may be resized;
+ * this dialog only reports that decision honestly, says what opened
+ * instead, and points at the system switch where one exists. It never
+ * blocks the clock: dismiss or back closes it, CHRONOS keeps running.
+ * Shown only when Settings → Floating App Windows → "Show instructions
+ * for unsupported devices" is on.
+ */
+@Composable
+fun FloatingWindowNoticeDialog(
+    notice: HomeViewModel.FloatingWindowNotice,
+    onDismiss: () -> Unit,
+) {
+    val palette = Chronos.palette
+    val title = if (notice.outcome == FloatingAppLauncher.Outcome.NONE) {
+        "Couldn't open the app"
+    } else {
+        "Floating window unavailable"
+    }
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(palette.background)
+                .padding(18.dp),
+        ) {
+            Text(
+                text = title,
+                color = palette.textPrimary,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+            )
+            Text(
+                text = notice.explanation(),
+                color = palette.textFaint,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Spacer(Modifier.weight(1f))
+                Text(
+                    text = "OK",
+                    color = palette.accent,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable(onClick = onDismiss)
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                )
+            }
+        }
+    }
+}
+
+/** Honest, device-aware copy for [FloatingWindowNoticeDialog]. */
+private fun HomeViewModel.FloatingWindowNotice.explanation(): String {
+    val opened = when (outcome) {
+        FloatingAppLauncher.Outcome.FLOATING -> "a floating window"
+        FloatingAppLauncher.Outcome.SPLIT -> "split screen"
+        FloatingAppLauncher.Outcome.FULL_SCREEN -> "full screen"
+        FloatingAppLauncher.Outcome.NOTIFICATION_HANDLE -> "its notification"
+        FloatingAppLauncher.Outcome.NONE -> null
+    }
+    val fallbackNote = if (outcome == FloatingAppLauncher.Outcome.NONE) {
+        " CHRONOS kept running. If you want apps to open the normal " +
+            "full-screen way, turn on “Allow normal full-screen " +
+            "fallback” in Settings → Notifications → Floating App Windows."
+    } else {
+        ""
+    }
+    return when (floatBlockReason) {
+        FloatingAppLauncher.FloatBlockReason.DEVICE_UNSUPPORTED ->
+            "This device doesn't provide Android floating (freeform) " +
+                "windows, so $appLabel opened in ${opened ?: "the normal way"}" +
+                " instead. Some devices expose the feature in Settings → " +
+                "Developer options → “Enable freeform windows” or " +
+                "“Force enable freeform window mode” (the exact " +
+                "name varies by manufacturer). CHRONOS always falls back to " +
+                "a normal launch." + fallbackNote
+        FloatingAppLauncher.FloatBlockReason.TARGET_UNRESIZABLE ->
+            "$appLabel declares itself non-resizable, so Android refuses to " +
+                "float it. It opened in ${opened ?: "the normal way"} instead." +
+                " CHRONOS never forces other apps into a window." + fallbackNote
+        FloatingAppLauncher.FloatBlockReason.REFUSED ->
+            "Android refused the floating-window launch for $appLabel. It " +
+                "opened in ${opened ?: "the normal way"} instead." + fallbackNote
+        null ->
+            if (outcome == FloatingAppLauncher.Outcome.NONE) {
+                "Android couldn't open $appLabel right now — it may be " +
+                    "disabled or the notification handle may be stale." +
+                    fallbackNote
+            } else {
+                "$appLabel opened in ${opened ?: "a window"}. The clock keeps " +
+                    "running behind it, and closing the window returns to " +
+                    "CHRONOS with its state intact."
+            }
     }
 }

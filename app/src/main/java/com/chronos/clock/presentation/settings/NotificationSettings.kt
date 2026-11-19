@@ -170,6 +170,44 @@ fun NotificationSettingsSection(
                 "floating window appears is decided by Android and the source " +
                 "app — see About → limitations.",
         )
+
+        // ——— Settings → Notifications → Floating App Windows ———
+        SectionHeader("Floating App Windows")
+
+        SwitchRow(
+            title = "Enable floating-window launch",
+            checked = settings.floatingWindowsEnabled,
+            onCheckedChange = { onChange(settings.copy(floatingWindowsEnabled = it)) },
+            description = "Open a tapped app in a real Android floating " +
+                "(freeform) window on top of the clock, with the system's own " +
+                "window controls. Availability is decided by your device and " +
+                "the target app — CHRONOS never forces it.",
+        )
+        SwitchRow(
+            title = "Prefer floating windows when supported",
+            checked = settings.preferFloatingWindows,
+            onCheckedChange = { onChange(settings.copy(preferFloatingWindows = it)) },
+            description = "On: try the floating window first, then split " +
+                "screen. Off: split screen first, floating only if split is " +
+                "refused.",
+        )
+        SwitchRow(
+            title = "Allow normal full-screen fallback",
+            checked = settings.allowFullScreenFallback,
+            onCheckedChange = { onChange(settings.copy(allowFullScreenFallback = it)) },
+            description = "If neither floating nor split screen works, open " +
+                "the app the normal full-screen way. Off: never launch " +
+                "full-screen — only the source app's official notification " +
+                "bubble may still open.",
+        )
+        SwitchRow(
+            title = "Show instructions for unsupported devices",
+            checked = settings.showFloatingInstructions,
+            onCheckedChange = { onChange(settings.copy(showFloatingInstructions = it)) },
+            description = "Explain after a tap when your device or an app " +
+                "blocks floating windows, what opened instead, and where " +
+                "floating windows can be enabled on devices that offer them.",
+        )
     }
 
     NoteText(
