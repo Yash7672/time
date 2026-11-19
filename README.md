@@ -93,8 +93,9 @@ All three keep clock accuracy independent of visual effects.
 - Deduplicated by Android key, group summaries collapsed into children, bounded
   to 50 entries / 8 visible icons.
 - **Quick reply** via the source app's own `RemoteInput` action (long-press an
-  icon → reply sheet listing your **last unseen messages** for context, with
-  Send / Dismiss) — the officially supported Android mechanism.
+  icon → reply sheet listing **all** your last unseen messages — sender, text
+  and time, expanding multi-message (MessagingStyle) notifications into every
+  message — with Send / Dismiss) — the officially supported Android mechanism.
 - **Bubbles**: if an app cannot be launched normally, CHRONOS falls back to the
   source notification's own bubble/content handle (the *Prefer bubbles* switch
   in Settings decides). See limitations below.

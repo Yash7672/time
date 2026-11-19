@@ -12,13 +12,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
@@ -36,6 +38,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -52,6 +55,8 @@ import com.chronos.clock.domain.model.NotificationGroup
 import com.chronos.clock.domain.model.NotificationSettings
 import com.chronos.clock.notifications.FloatingAppLauncher
 import com.chronos.clock.presentation.theme.Chronos
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 /**
  * Notification app icons shown along the bottom of the clock screen.
@@ -61,10 +66,11 @@ import com.chronos.clock.presentation.theme.Chronos
  * - One icon per app with an unread count indicator — this keeps multiple
  *   notifications organised and guarantees no overlap with the clock.
  * - Tap opens the app beside CHRONOS in multi-window (split screen).
- * - Long-press opens the reply dialog — which lists the **last unseen
- *   messages** of that app for context — when quick reply is on and the
- *   notification supports RemoteInput (Dismiss lives in the same dialog);
- *   otherwise long-press dismisses the notification directly.
+ * - Long-press opens the reply dialog — which lists **all** the last
+ *   unseen messages of that app, with senders and times (multi-message
+ *   notifications expand into every message) — when quick reply is on
+ *   and the notification supports RemoteInput (Dismiss lives in the same
+ *   dialog); otherwise long-press dismisses the notification directly.
  * - Bounded to [AppConstants.MAX_VISIBLE_ICONS] entries plus a "+N" chip.
  * - AMOLED friendly: dim circular backdrops, no bright surfaces.
  */
@@ -326,13 +332,53 @@ fun NotificationStatusLine(
     )
 }
 
+/** One rendered line of the reply sheet's unseen-messages list. */
+data class UnseenMessage(
+    val sender: String?,
+    val text: String,
+    /** Epoch ms; 0 = unknown (the row then hides its time). */
+    val time: Long,
+)
+
+/**
+ * Builds the reply sheet's complete **last unseen messages** list from
+ * every active notification of [group]: MessagingStyle notifications
+ * expand into their individual messages (sender + text + timestamp),
+ * everything else contributes its title/text preview. Oldest
+ * notification first, each notification's own messages in order — the
+ * list reads chronologically and nothing is capped. Pure and
+ * unit-tested.
+ */
+fun buildUnseenMessages(group: NotificationGroup): List<UnseenMessage> =
+    buildList {
+        for (item in group.items.asReversed()) {
+            if (item.styleMessages.isNotEmpty()) {
+                // One notification, several messages: expand them all —
+                // this is what "all last unseen messages" means.
+                item.styleMessages.forEach {
+                    add(UnseenMessage(it.sender, it.text, it.time))
+                }
+            } else when {
+                item.title != null && item.text != null ->
+                    add(UnseenMessage(item.title, item.text, item.postTime))
+                item.title != null ->
+                    add(UnseenMessage(null, item.title, item.postTime))
+                item.text != null ->
+                    add(UnseenMessage(null, item.text, item.postTime))
+                // Nothing readable (e.g. a bare progress notification).
+                else -> Unit
+            }
+        }
+    }
+
 /**
  * AMOLED reply sheet: type and send through the source app's own
  * RemoteInput (the officially supported Android mechanism), dismiss the
- * notification, or cancel. The sheet lists the **last unseen messages** —
- * every active notification of that app, oldest of the newest few first —
- * so a reply always has context. Every colour comes from the palette — no
- * default Material surfaces light up the panel.
+ * notification, or cancel. Above the input it lists **all** of the
+ * app's last unseen messages — senders, bodies and times, with
+ * multi-message notifications expanded — newest at the bottom next to
+ * the reply box. Every colour comes from the palette — no default
+ * Material surfaces light up the panel.
  */
 @Composable
 private fun ReplyDialog(
@@ -344,16 +390,29 @@ private fun ReplyDialog(
     val palette = Chronos.palette
     var text by remember { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
+    // Complete list, built once per group; LazyColumn renders only the
+    // rows on screen, so even very long histories stay cheap.
+    val rows = remember(group) { buildUnseenMessages(group) }
+    val listState = rememberLazyListState()
+    val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+    val screenHeightDp = LocalConfiguration.current.screenHeightDp
+
+    // Open at the newest message — that is what you are replying to;
+    // scrolling up walks back through everything unseen.
+    LaunchedEffect(rows.size) {
+        if (rows.isNotEmpty()) listState.scrollToItem(rows.size - 1)
+    }
 
     Dialog(onDismissRequest = onClose) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                // Cap the sheet at most of the screen so input and
+                // buttons stay visible no matter how many messages
+                // there are — portrait and landscape alike.
+                .heightIn(max = (screenHeightDp * 0.78f).dp)
                 .clip(RoundedCornerShape(16.dp))
                 .background(palette.background)
-                // Scrollable so the message list plus input and buttons
-                // always fit — portrait and landscape alike.
-                .verticalScroll(rememberScrollState())
                 .padding(18.dp),
         ) {
             Text(
@@ -362,46 +421,60 @@ private fun ReplyDialog(
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium,
             )
-            // The last unseen messages: every still-active notification of
-            // this app (memory only — Android drops each one the moment it
-            // is read or dismissed in the source app). Newest few, shown
-            // oldest → newest so the sheet reads like a conversation.
-            // CHRONOS only ever shows what the notifications carried.
-            val unseen = group.items
-                .filter { it.title != null || it.text != null }
-                .take(AppConstants.MAX_REPLY_MESSAGES)
-                .reversed()
-            if (unseen.isNotEmpty()) {
+            if (rows.isNotEmpty()) {
                 Text(
-                    text = "Last unseen messages",
+                    text = "Last unseen messages (${rows.size})",
                     color = palette.textSecondary,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(top = 6.dp),
                 )
-                unseen.forEach { msg ->
-                    val sender = msg.title
-                    val body = msg.text
-                    val line: AnnotatedString = when {
-                        sender != null && body != null -> buildAnnotatedString {
-                            withStyle(SpanStyle(color = palette.textSecondary)) {
-                                append(sender)
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        // Takes only the space the fixed input and
+                        // buttons leave: compact with a couple of
+                        // messages, scrollable with many.
+                        .weight(1f, fill = false)
+                        .padding(top = 2.dp),
+                ) {
+                    items(rows) { msg ->
+                        val sender = msg.sender
+                        val body = msg.text
+                        val line: AnnotatedString = when {
+                            !sender.isNullOrBlank() -> buildAnnotatedString {
+                                withStyle(SpanStyle(color = palette.textSecondary)) {
+                                    append(sender)
+                                }
+                                withStyle(SpanStyle(color = palette.textFaint)) {
+                                    append(": $body")
+                                }
                             }
-                            withStyle(SpanStyle(color = palette.textFaint)) {
-                                append(": $body")
+                            else -> AnnotatedString(body)
+                        }
+                        Row(modifier = Modifier.padding(top = 3.dp)) {
+                            Text(
+                                text = line,
+                                color = palette.textFaint,
+                                fontSize = 12.sp,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f),
+                            )
+                            if (msg.time > 0L) {
+                                Text(
+                                    text = timeFormat.format(msg.time),
+                                    color = palette.textFaint,
+                                    fontSize = 10.sp,
+                                    maxLines = 1,
+                                    modifier = Modifier.padding(
+                                        start = 8.dp,
+                                        top = 2.dp,
+                                    ),
+                                )
                             }
                         }
-                        sender != null -> AnnotatedString(sender)
-                        else -> AnnotatedString(body ?: "")
                     }
-                    Text(
-                        text = line,
-                        color = palette.textFaint,
-                        fontSize = 12.sp,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(top = 3.dp),
-                    )
                 }
             }
 

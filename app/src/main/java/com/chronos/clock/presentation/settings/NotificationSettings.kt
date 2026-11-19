@@ -157,9 +157,10 @@ fun NotificationSettingsSection(
             onCheckedChange = { onChange(settings.copy(quickReplyEnabled = it)) },
             description = "Long-press an icon to reply through the source app's " +
                 "own Android RemoteInput (WhatsApp, Telegram, etc.) — the sheet " +
-                "shows your last unseen messages for context and also offers " +
-                "Dismiss. Falls back to a plain dismiss when the notification " +
-                "has no reply action.",
+                "lists all your last unseen messages (sender, text, time; " +
+                "multi-message notifications expand) and also offers Dismiss. " +
+                "Falls back to a plain dismiss when the notification has no " +
+                "reply action.",
         )
 
         SwitchRow(

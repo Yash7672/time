@@ -3,6 +3,7 @@ package com.chronos.clock.notifications
 import android.app.Notification
 import android.content.ComponentName
 import android.content.Context
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.service.notification.NotificationListenerService
@@ -10,6 +11,7 @@ import android.service.notification.StatusBarNotification
 import com.chronos.clock.ChronosApp
 import com.chronos.clock.core.permissions.PermissionHelper
 import com.chronos.clock.domain.model.NotificationItem
+import com.chronos.clock.domain.model.StyleMessage
 
 /**
  * System-bound notification listener.
@@ -95,7 +97,14 @@ class NotificationListener : NotificationListenerService() {
             val extras = n.extras ?: return
 
             val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()
-            val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()
+            // Prefer the expanded BigText (the full message) over the
+            // one-line preview — and, for MessagingStyle notifications,
+            // also pull out every individual message (see below): that is
+            // where "all last unseen messages" really live.
+            val text = (extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
+                ?.takeIf { it.isNotBlank() }
+                ?: extras.getCharSequence(Notification.EXTRA_TEXT)?.toString())
+            val styleMessages = styleMessagesOf(extras)
             val label = try {
                 packageManager.getApplicationLabel(
                     packageManager.getApplicationInfo(sbn.packageName, 0),
@@ -125,12 +134,44 @@ class NotificationListener : NotificationListenerService() {
                     contentIntent = n.contentIntent,
                     bubbleIntent = bubbleIntentOf(n),
                     replyActions = replyActions,
+                    styleMessages = styleMessages,
                 ),
             )
         } catch (_: Exception) {
             // Buggy extras/actions from a single app: skip this notification,
             // keep the listener alive for every other app.
         }
+    }
+
+    /**
+     * The individual messages packed inside a MessagingStyle notification —
+     * chat apps put several sender/text/timestamp messages into ONE
+     * notification, so this is what makes "all last unseen messages"
+     * possible. Read with plain Bundle calls against the **public**
+     * [Notification.EXTRA_MESSAGES] constant (documented in the SDK) and
+     * the per-message keys spelled out in frameworks/base
+     * (`"text"` / `"time"` / `"sender"`) — no reflection, no hidden
+     * method. Best-effort: a malformed payload yields an empty list and
+     * can never take the listener down.
+     */
+    @Suppress("DEPRECATION") // no public typed-array Bundle overload before API 33
+    private fun styleMessagesOf(extras: Bundle): List<StyleMessage> = try {
+        extras.getParcelableArray(Notification.EXTRA_MESSAGES)
+            ?.filterIsInstance<Bundle>()
+            ?.mapNotNull { b ->
+                val body = b.getCharSequence(KEY_TEXT)?.toString()
+                if (body.isNullOrBlank()) {
+                    null
+                } else {
+                    StyleMessage(
+                        sender = b.getCharSequence(KEY_SENDER)?.toString(),
+                        text = body,
+                        time = b.getLong(KEY_TIME, 0L),
+                    )
+                }
+            } ?: emptyList()
+    } catch (_: Exception) {
+        emptyList()
     }
 
     private fun bubbleIntentOf(n: Notification): android.app.PendingIntent? =
@@ -157,6 +198,13 @@ class NotificationListener : NotificationListenerService() {
 
         /** One delayed re-backfill after connect (OEM empty-snapshot quirk). */
         private const val BACKFILL_RETRY_MS = 1_500L
+
+        // Per-message keys inside Notification.EXTRA_MESSAGES bundles —
+        // exact spellings verified in AOSP frameworks/base (Notification
+        //.MessagingStyle.Message.toBundle).
+        private const val KEY_TEXT = "text"
+        private const val KEY_TIME = "time"
+        private const val KEY_SENDER = "sender"
 
         @Volatile
         private var lastRebindAtMs = 0L

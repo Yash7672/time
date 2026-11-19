@@ -3,6 +3,22 @@ package com.chronos.clock.domain.model
 import android.app.PendingIntent
 
 /**
+ * One message inside a MessagingStyle notification: chat apps pack
+ * several sender/text/timestamp messages into a **single** notification.
+ * This is where the reply sheet's full "last unseen messages" list comes
+ * from. Memory only, exactly like the rest of the notification data.
+ *
+ * @property sender Who sent it (null for own messages / no sender given)
+ * @property text The message body
+ * @property time Epoch ms when it was sent; 0 = not provided
+ */
+data class StyleMessage(
+    val sender: String?,
+    val text: String,
+    val time: Long,
+)
+
+/**
  * One active notification, held in memory only.
  *
  * CHRONOS never writes notification content to disk, never uploads it and
@@ -27,6 +43,12 @@ data class NotificationItem(
     val bubbleIntent: PendingIntent? = null,
     /** Source app's actions that declare RemoteInput (i.e. quick reply). */
     val replyActions: List<android.app.Notification.Action> = emptyList(),
+    /**
+     * Every message carried inside this notification's MessagingStyle,
+     * oldest first (empty for plain notifications, which only have
+     * [title]/[text]).
+     */
+    val styleMessages: List<StyleMessage> = emptyList(),
 ) {
     val canReply: Boolean get() = replyActions.isNotEmpty()
 }
