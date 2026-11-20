@@ -152,6 +152,20 @@ fun NotificationSettingsSection(
         }
 
         SwitchRow(
+            title = "Silence message banners",
+            checked = settings.silenceBanners,
+            onCheckedChange = { onChange(settings.copy(silenceBanners = it)) },
+            description = "While CHRONOS is on screen nothing pops down " +
+                "from the top: incoming notifications are hidden from " +
+                "Android and open only with tap-and-hold on their icon " +
+                "here. Calls, alarms and music are never hidden, and " +
+                "with CHRONOS in the background the phone behaves " +
+                "normally — you cannot miss anything. If you read a " +
+                "message inside its own app, swipe its icon down here " +
+                "to clear it too.",
+        )
+
+        SwitchRow(
             title = "Quick reply",
             checked = settings.quickReplyEnabled,
             onCheckedChange = { onChange(settings.copy(quickReplyEnabled = it)) },

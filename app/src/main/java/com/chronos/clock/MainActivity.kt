@@ -105,12 +105,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        (application as? ChronosApp)?.uiVisible = true
         syncLightSensor(viewModel?.settings?.value?.display?.autoBrightness ?: true)
     }
 
     override fun onStop() {
         // The sensor never runs while CHRONOS is not visible.
         unregisterLightSensor()
+        (application as? ChronosApp)?.uiVisible = false
         super.onStop()
     }
 

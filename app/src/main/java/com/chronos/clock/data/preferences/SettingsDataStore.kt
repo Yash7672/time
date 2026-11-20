@@ -66,6 +66,7 @@ class SettingsDataStore(
         val NOTIF_PRIVACY = stringPreferencesKey("notif_privacy")
         val NOTIF_QUICK_REPLY = booleanPreferencesKey("notif_quick_reply")
         val NOTIF_BUBBLES = booleanPreferencesKey("notif_bubbles")
+        val NOTIF_SILENCE_BANNERS = booleanPreferencesKey("notif_silence_banners")
         val NOTIF_FLOATING = booleanPreferencesKey("notif_floating_windows")
         val NOTIF_FLOATING_PREFER = booleanPreferencesKey("notif_floating_prefer")
         val NOTIF_FLOATING_FULLSCREEN = booleanPreferencesKey("notif_floating_fullscreen")
@@ -160,6 +161,10 @@ class SettingsDataStore(
                     ),
                     quickReplyEnabled = bool(Keys.NOTIF_QUICK_REPLY, defaults.notifications.quickReplyEnabled),
                     bubblesEnabled = bool(Keys.NOTIF_BUBBLES, defaults.notifications.bubblesEnabled),
+                    silenceBanners = bool(
+                        Keys.NOTIF_SILENCE_BANNERS,
+                        defaults.notifications.silenceBanners,
+                    ),
                     floatingWindowsEnabled = bool(
                         Keys.NOTIF_FLOATING,
                         defaults.notifications.floatingWindowsEnabled,
@@ -242,6 +247,7 @@ class SettingsDataStore(
             putEnum(Keys.NOTIF_PRIVACY, no.privacy, nn.privacy)
             putBool(Keys.NOTIF_QUICK_REPLY, no.quickReplyEnabled, nn.quickReplyEnabled)
             putBool(Keys.NOTIF_BUBBLES, no.bubblesEnabled, nn.bubblesEnabled)
+            putBool(Keys.NOTIF_SILENCE_BANNERS, no.silenceBanners, nn.silenceBanners)
             putBool(Keys.NOTIF_FLOATING, no.floatingWindowsEnabled, nn.floatingWindowsEnabled)
             putBool(Keys.NOTIF_FLOATING_PREFER, no.preferFloatingWindows, nn.preferFloatingWindows)
             putBool(Keys.NOTIF_FLOATING_FULLSCREEN, no.allowFullScreenFallback, nn.allowFullScreenFallback)

@@ -34,6 +34,14 @@ class NotificationListener : NotificationListenerService() {
 
     private val mainHandler = Handler(Looper.getMainLooper())
 
+    /**
+     * Keys we have snoozed for banner silencing. Their "removal" is only
+     * the snooze hiding them from the system — the message itself must
+     * stay in the icon row, so removal callbacks consult this set.
+     */
+    private val silencedKeys: MutableSet<String> =
+        java.util.Collections.synchronizedSet(mutableSetOf<String>())
+
     override fun onListenerConnected() {
         super.onListenerConnected()
         active = this
@@ -71,9 +79,47 @@ class NotificationListener : NotificationListenerService() {
         publish(sbn)
     }
 
-    override fun onNotificationRemoved(sbn: StatusBarNotification?) {
+    override fun onNotificationRemoved(sbn: StatusBarNotification?) =
+        handleRemoved(sbn, REASON_UNKNOWN)
+
+    override fun onNotificationRemoved(
+        sbn: StatusBarNotification?,
+        rankingMap: RankingMap?,
+        reason: Int,
+    ) = handleRemoved(sbn, reason)
+
+    /**
+     * One shared removal path (the plain overload covers OEM builds that
+     * report no reason; the reason-carrying one runs everywhere else).
+     *
+     * Banner-silenced (snoozed) messages are kept: our snooze only hides
+     * the notification from the system, the message itself must stay in
+     * the icon row. A real user dismissal can never be mistaken for that,
+     * because NotificationManager drops dismissed keys from the store
+     * itself first; every other reason (source app clearing it, a tap in
+     * the shade) removes the entry as usual.
+     */
+    private fun handleRemoved(sbn: StatusBarNotification?, reason: Int) {
         sbn ?: return
-        runCatching { repository?.onRemoved(sbn.key) }
+        runCatching {
+            val key = sbn.key
+            val keep = key in silencedKeys &&
+                (
+                    reason == NotificationListenerService.REASON_SNOOZED ||
+                        reason == REASON_UNKNOWN ||
+                        // Our own dismiss() cancelling a silenced key —
+                        // the store already dropped it locally.
+                        reason == NotificationListenerService.REASON_LISTENER_CANCEL
+                    )
+            if (keep) {
+                if (reason == NotificationListenerService.REASON_LISTENER_CANCEL) {
+                    silencedKeys.remove(key)
+                }
+                return
+            }
+            silencedKeys.remove(key)
+            repository?.onRemoved(key)
+        }
     }
 
     private fun backfill() {
@@ -88,12 +134,15 @@ class NotificationListener : NotificationListenerService() {
         // Never let one malformed notification from any app take the whole
         // listener down — a crashed service means no icons, ever.
         try {
-            // Ongoing sessions (media, navigation, downloads, screen share)
-            // are states rather than messages — they would sit in the icon
-            // row forever and bury the apps the user actually cares about.
-            if (sbn.isOngoing) return
             val repo = repository ?: return
             val n = sbn.notification
+            // Ongoing sessions (navigation, downloads, screen share) are
+            // states rather than messages — they would sit in the icon
+            // row forever and bury the apps the user actually cares about.
+            // Active media playback is the one exception: its icon is the
+            // handle for the tap-and-hold transport panel, and Android
+            // clears the notification itself when playback ends.
+            if (sbn.isOngoing && !isMediaNotification(n)) return
             val extras = n.extras ?: return
 
             val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()
@@ -137,11 +186,45 @@ class NotificationListener : NotificationListenerService() {
                     styleMessages = styleMessages,
                 ),
             )
+
+            // Banner silencing: hide the system preview for this message
+            // (the setting, CHRONOS's visibility and the exemptions are
+            // all decided here — see silenceBanner).
+            silenceBanner(sbn, n, repo)
         } catch (_: Exception) {
             // Buggy extras/actions from a single app: skip this notification,
             // keep the listener alive for every other app.
         }
     }
+
+    /**
+     * Banner silencing: snooze the notification the instant it posts so
+     * Android never gets to show its heads-up banner — the message is then
+     * reachable only through CHRONOS's tap-and-hold sheet. Scoped to while
+     * CHRONOS is actually on screen (in the background the phone stays
+     * stock, so nothing can be missed and no notification gets stuck),
+     * never touches calls, alarms or media, and a snooze the OEM build
+     * refuses is simply ignored (the banner shows, nothing breaks).
+     */
+    private fun silenceBanner(
+        sbn: StatusBarNotification,
+        n: Notification,
+        repo: NotificationRepository,
+    ) {
+        if (!repo.settings.value.silenceBanners) return
+        if ((application as? ChronosApp)?.uiVisible != true) return
+        if (sbn.packageName == packageName) return
+        if (isMediaNotification(n) || n.category in NEVER_SILENCE) return
+        runCatching {
+            snoozeNotification(sbn.key, SNOOZE_MS)
+            silencedKeys.add(sbn.key)
+        }
+    }
+
+    /** True for music/video playback notifications (they get the media icon). */
+    private fun isMediaNotification(n: Notification): Boolean =
+        n.category == Notification.CATEGORY_TRANSPORT ||
+            n.extras?.containsKey(Notification.EXTRA_MEDIA_SESSION) == true
 
     /**
      * The individual messages packed inside a MessagingStyle notification —
@@ -205,6 +288,18 @@ class NotificationListener : NotificationListenerService() {
         private const val KEY_TEXT = "text"
         private const val KEY_TIME = "time"
         private const val KEY_SENDER = "sender"
+
+        /** Notification categories that must never be silenced. */
+        private val NEVER_SILENCE = setOf(
+            Notification.CATEGORY_CALL,
+            Notification.CATEGORY_ALARM,
+        )
+
+        /** ~10 years — effectively "until the source app itself clears it". */
+        private const val SNOOZE_MS = 315_360_000_000L
+
+        /** Marker for removal callbacks that arrive without a reason. */
+        private const val REASON_UNKNOWN = -1
 
         @Volatile
         private var lastRebindAtMs = 0L

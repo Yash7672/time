@@ -67,6 +67,11 @@ class NotificationManager(
         val listener = NotificationListener.active
         return if (listener != null) {
             listener.dismiss(item)
+            // Drop it locally right away: a banner-silenced (snoozed)
+            // notification may never produce a system removal callback,
+            // and a dismissed icon must never linger. The system callback,
+            // if it arrives, is a no-op on an already-removed key.
+            repository.onRemoved(item.key)
             true
         } else {
             // Service not bound right now: drop it locally at least.

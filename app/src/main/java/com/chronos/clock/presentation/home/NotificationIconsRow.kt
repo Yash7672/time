@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -55,6 +56,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import android.media.session.MediaController
 import com.chronos.clock.core.constants.AppConstants
 import com.chronos.clock.domain.model.NotificationGroup
 import com.chronos.clock.domain.model.NotificationSettings
@@ -76,7 +78,9 @@ import kotlin.math.roundToInt
  *   unseen messages of that app, with senders and times (multi-message
  *   notifications expand into every message) — when quick reply is on
  *   and the notification supports RemoteInput (Dismiss lives in the same
- *   dialog); otherwise long-press dismisses the notification directly.
+ *   dialog); a music player with an active media session opens the
+ *   transport panel (previous / play-pause / next) instead; with neither
+ *   available long-press dismisses the notification directly.
  * - Swipe an icon **down** past the threshold to ignore that app — it
  *   clears all of that app's notifications (tap and long-press unchanged).
  * - Bounded to [AppConstants.MAX_VISIBLE_ICONS] entries plus a "+N" chip.
@@ -95,6 +99,7 @@ fun NotificationIconsRow(
 ) {
     if (!settings.showAppIcons || groups.isEmpty()) return
     val palette = Chronos.palette
+    val context = LocalContext.current
 
     // Which app's reply dialog is open (null = none). Keyed by package and
     // resolved against the LIVE list on every recomposition, so messages
@@ -104,6 +109,26 @@ fun NotificationIconsRow(
         groups.firstOrNull { it.packageName == pkg }
             // The sheet only exists while something can be replied to.
             ?.takeIf { g -> g.items.any { item -> item.canReply } }
+    }
+
+    // Which app's media transport panel is open — resolved live like the
+    // reply sheet; its controller was captured at long-press time.
+    var mediaPackage by remember { mutableStateOf<String?>(null) }
+    var mediaController by remember { mutableStateOf<MediaController?>(null) }
+    val mediaTarget = mediaPackage?.let { pkg ->
+        groups.firstOrNull { it.packageName == pkg }
+    }
+
+    // Never reopen a panel by itself: forget it the moment its app has no
+    // active notification left (playback ended, icon cleared) — the next
+    // track must not pop the dialog uninvited.
+    if (mediaPackage != null && mediaTarget == null) {
+        mediaPackage = null
+        mediaController = null
+    }
+    // Same guard for the reply sheet once its whole app has left the row.
+    if (replyPackage != null && replyTarget == null && groups.none { it.packageName == replyPackage }) {
+        replyPackage = null
     }
 
     val visible = groups.take(AppConstants.MAX_VISIBLE_ICONS)
@@ -123,15 +148,24 @@ fun NotificationIconsRow(
                 loadIcon = loadIcon,
                 onOpen = onOpen,
                 onLongClick = {
-                    // Reply when ANY active notification of the app can
-                    // take it — the newest one may be action-less (WhatsApp
-                    // often keeps a second, non-replyable notification).
-                    if (settings.quickReplyEnabled &&
-                        group.items.any { it.canReply }
-                    ) {
-                        replyPackage = group.packageName
-                    } else {
-                        onDismiss(group)
+                    when {
+                        // Reply when ANY active notification of the app can
+                        // take it — the newest one may be action-less (WhatsApp
+                        // often keeps a second, non-replyable notification).
+                        settings.quickReplyEnabled && group.items.any { it.canReply } ->
+                            replyPackage = group.packageName
+                        // Music: the transport panel (previous / play-pause /
+                        // next) through the app's own media session. With
+                        // neither reply nor session, long-press dismisses.
+                        else -> {
+                            val controller = activeMediaController(context, group.packageName)
+                            if (controller != null) {
+                                mediaController = controller
+                                mediaPackage = group.packageName
+                            } else {
+                                onDismiss(group)
+                            }
+                        }
                     }
                 },
                 onSwipeDismiss = { onDismiss(group) },
@@ -171,6 +205,22 @@ fun NotificationIconsRow(
                 replyPackage = null
             },
             onClose = { replyPackage = null },
+        )
+    }
+
+    mediaTarget?.let { target ->
+        MediaPanelDialog(
+            group = target,
+            controller = mediaController,
+            onDismissNotification = {
+                onDismiss(target)
+                mediaPackage = null
+                mediaController = null
+            },
+            onClose = {
+                mediaPackage = null
+                mediaController = null
+            },
         )
     }
 }

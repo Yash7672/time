@@ -72,8 +72,9 @@ All three keep clock accuracy independent of visual effects.
   `setLaunchBounds` window, otherwise **split screen** beside it;
   long-press opens the quick-reply sheet, which lists **all** the app's
   last unseen messages (sender, text, time — updating live while the
-  sheet is open; or dismisses the notifications when the app offers no
-  reply action), and **swiping an icon down** ignores that app — it
+  sheet is open; for a music player it opens the **transport panel**
+  instead; with neither available it dismisses the notifications), and
+  **swiping an icon down** ignores that app — it
   clears all of its notifications. The integration setting
   itself is **on by default** — the only thing Android requires is the
   notification-access grant, which CHRONOS can never give itself.
@@ -100,6 +101,17 @@ All three keep clock accuracy independent of visual effects.
   icon → reply sheet listing **all** your last unseen messages — sender, text
   and time, expanding multi-message (MessagingStyle) notifications into every
   message — with Send / Dismiss) — the officially supported Android mechanism.
+- **Silence message banners** (on by default): while CHRONOS is on screen no
+  notification ever pops down from the top — the listener snoozes each
+  message-like notification the moment it posts, so it lives only in its icon
+  here (tap-and-hold to read and reply). Calls, alarms and music are never
+  hidden, and with CHRONOS in the background Android behaves exactly like
+  stock, so nothing can be missed.
+- **Music transport panel**: long-press a player's icon for previous /
+  play-pause / next, dispatched through the app's own media session via the
+  public `MediaSessionManager`/`MediaController` API (the notification-access
+  grant is the entitlement it needs) — play state and track title update
+  live, and actions the player doesn't support are dimmed.
 - **Bubbles**: if an app cannot be launched normally, CHRONOS falls back to the
   source notification's own bubble/content handle (the *Prefer bubbles* switch
   in Settings decides). See limitations below.
@@ -140,7 +152,8 @@ All three keep clock accuracy independent of visual effects.
    modes, burn-in drift, minimal clock
 3. **Star background** — enable, density (Low/Med/High)
 4. **Notifications** — access toggle, app selection, icons, indicators,
-   privacy mode, quick reply, bubbles, **floating app windows** (enable
+   privacy mode, **silence message banners**, quick reply, bubbles,
+   **floating app windows** (enable
    floating-window launch, prefer floating when supported, allow normal
    full-screen fallback, show instructions for unsupported devices)
 5. **Display** — auto brightness (light sensor), keep-awake, fullscreen

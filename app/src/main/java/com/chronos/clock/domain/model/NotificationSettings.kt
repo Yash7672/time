@@ -29,6 +29,15 @@ data class NotificationSettings(
      * app's control — see README "Known Android limitations".
      */
     val bubblesEnabled: Boolean = true,
+    /**
+     * Suppress the system heads-up banner **while CHRONOS is on screen**:
+     * the listener snoozes each message-like notification the moment it
+     * posts, so no preview drops from the top — the message lives only in
+     * its app icon here, reachable with tap-and-hold. Calls, alarms and
+     * media are never silenced, and with CHRONOS in the background the
+     * phone behaves exactly like stock, so nothing can be missed.
+     */
+    val silenceBanners: Boolean = true,
 
     // ——— Settings → Notifications → Floating App Windows ———
     /**

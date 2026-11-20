@@ -21,6 +21,16 @@ class ChronosApp : Application() {
     lateinit var container: AppContainer
         private set
 
+    /**
+     * True while CHRONOS is on screen (its single activity is started).
+     * The notification listener reads this to scope banner silencing:
+     * messages are only ever hidden while the clock is showing — in the
+     * background the phone behaves exactly like stock Android, so nothing
+     * can be missed and no notification can get stuck.
+     */
+    @Volatile
+    var uiVisible: Boolean = false
+
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
