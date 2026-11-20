@@ -186,6 +186,21 @@ All three keep clock accuracy independent of visual effects.
 
 ---
 
+## Installing on a phone (Play Protect)
+
+CHRONOS is sideloaded and uses Android's notification access, so **Google Play
+Protect automatically blocks** installs opened from a browser, messenger or file
+manager — the dialog says *"App blocked to protect your device"*. That is
+Google's internet-sideloading policy, not a malware verdict, and it cannot be
+switched off from inside the app: the only trigger to remove would be the
+notification feature itself. Install over **ADB**
+([`install-chronos.bat`](install-chronos.bat)), temporarily turn off *Scan apps
+with Play Protect* for the install, or publish through Google Play — every
+method, the free Google appeal path and the certificate/permission checks are
+in [INSTALL.md](INSTALL.md).
+
+---
+
 ## Known Android limitations (honest notes)
 
 - **Floating windows / bubbles**: whether WhatsApp or any app appears as a
@@ -227,7 +242,7 @@ All three keep clock accuracy independent of visual effects.
 ### Tests & lint
 
 ```powershell
-.\gradlew.bat :app:testDebugUnitTest   # 23 unit tests
+.\gradlew.bat :app:testDebugUnitTest   # 45 unit tests
 .\gradlew.bat :app:lintDebug           # 0 errors
 ```
 
