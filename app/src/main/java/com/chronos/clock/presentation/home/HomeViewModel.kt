@@ -224,8 +224,10 @@ class HomeViewModel(
         if (sent) {
             // The text went out through the app's own handle as a normal
             // message — drop the answered notification so no stale "unseen"
-            // line keeps tagging along in CHRONOS.
-            notifications.dismiss(target)
+            // line keeps tagging along in CHRONOS. The reply quiet window
+            // also swallows the source app's immediate echo/read-receipt
+            // re-post, which previously made the icon pop straight back.
+            notifications.dismissAfterReply(target)
         }
         return sent
     }

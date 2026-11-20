@@ -67,4 +67,6 @@ Auto brightness reads `TYPE_LIGHT` only while the app is visible, to dim/brighte
 
 ## 7. GitHub Releases (sideload path)
 
-Every `v*` tag publishes `app-release.apk` + `app-release.aab` automatically via `.github/workflows/android.yml`. Sideloaded APKs are signed with the same permanent key, so installs/upgrades stay consistent across machines. Users must enable "install from unknown sources" for the browser/file manager — that is an Android consent prompt, not a Play Protect failure; never instruct users to disable Play Protect.
+Every `v*` tag publishes `app-release.apk` + `app-release.aab` automatically via `.github/workflows/android.yml`. Sideloaded APKs are signed with the same permanent key, so installs/upgrades stay consistent across machines.
+
+**Play Protect and direct installs:** Play Protect auto-blocks direct installs of apps that use notification access when the APK comes from an internet-sideloading source (browser, messenger, file manager). This is a Google policy decision about the source, not a CHRONOS failure — no app can whitelist itself out of it. The zero-warning path is Play distribution (internal/closed testing is enough); otherwise the recipient can install over **ADB**, file a **Play Protect false-positive report** through Google Play support with the APK's SHA-256, or temporarily turn off *Scan apps with Play Protect* for the install. Never present disabling Play Protect as normal, permanent advice.

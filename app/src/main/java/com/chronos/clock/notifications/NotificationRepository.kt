@@ -3,6 +3,7 @@ package com.chronos.clock.notifications
 import android.content.ComponentName
 import android.content.Context
 import android.graphics.drawable.Drawable
+import android.os.SystemClock
 import androidx.core.graphics.drawable.toBitmap
 import com.chronos.clock.domain.model.NotificationGroup
 import com.chronos.clock.domain.model.NotificationItem
@@ -40,15 +41,92 @@ class NotificationRepository(private val appContext: Context) {
         recompute()
     }
 
-    fun onPosted(item: NotificationItem) = _items.update { NotificationReducer.onPosted(it, item) }
-        .also { recompute() }
+    /**
+     * What the user last dismissed, by notification key. Chat apps often
+     * re-post the *identical* notification right after a dismiss or a quick
+     * reply (sync echo / read receipt). Without this memory the icon popped
+     * straight back in, which looked like "closing notifications does
+     * nothing". Content-identical re-posts are ignored for
+     * [DISMISS_MEMORY_MS]; a genuinely new message has new text/time and
+     * always shows up normally.
+     */
+    private data class DismissMark(
+        val content: String,
+        val at: Long,
+        /** Set after a quick reply: suppress *any* re-post until then. */
+        val quietUntil: Long = 0L,
+    )
 
-    fun onRemoved(key: String) = _items.update { NotificationReducer.onRemoved(it, key) }
-        .also { recompute() }
+    /** Access-ordered bounded map: least recently touched entry evicted first. */
+    private val dismissed = LinkedHashMap<String, DismissMark>(16, 0.75f, true)
+
+    fun onPosted(item: NotificationItem) {
+        synchronized(dismissed) {
+            val mark = dismissed[item.key]
+            if (mark != null) {
+                val now = SystemClock.elapsedRealtime()
+                val sameContent = mark.content == item.contentSignature()
+                val quiet = now < mark.quietUntil
+                if (quiet || (sameContent && now - mark.at <= DISMISS_MEMORY_MS)) {
+                    // The user already dismissed exactly this content —
+                    // keep it out of the row (banner silencing in the
+                    // listener keeps it out of the shade as well).
+                    return
+                }
+                dismissed.remove(item.key)
+            }
+        }
+        _items.update { NotificationReducer.onPosted(it, item) }
+        recompute()
+    }
+
+    fun onRemoved(key: String) {
+        val item = _items.value.firstOrNull { it.key == key }
+        if (item != null) {
+            synchronized(dismissed) {
+                dismissed[key] = DismissMark(
+                    content = item.contentSignature(),
+                    at = SystemClock.elapsedRealtime(),
+                )
+                while (dismissed.size > DISMISS_MEMORY_MAX) {
+                    val eldest = dismissed.entries.iterator()
+                    if (!eldest.hasNext()) break
+                    eldest.next()
+                    eldest.remove()
+                }
+            }
+        }
+        _items.update { NotificationReducer.onRemoved(it, key) }
+        recompute()
+    }
+
+    /**
+     * After a quick reply the source app rewrites its notification almost
+     * immediately (read receipt, "sent" echo). Suppress every re-post of
+     * that key for [durationMs] so the icon cannot pop straight back in.
+     */
+    fun suppressFor(key: String, durationMs: Long) {
+        synchronized(dismissed) {
+            val mark = dismissed[key] ?: return
+            dismissed[key] = mark.copy(quietUntil = SystemClock.elapsedRealtime() + durationMs)
+        }
+    }
 
     fun clear() {
+        synchronized(dismissed) { dismissed.clear() }
         _items.value = emptyList()
         recompute()
+    }
+
+    /** Stable identity of what the notification *says* (not when it posted). */
+    private fun NotificationItem.contentSignature(): String = buildString {
+        append(title).append('\u0000')
+        append(text).append('\u0000')
+        append(styleMessages.size)
+        for (m in styleMessages) {
+            append('\u0000').append(m.sender).append('\u0001').append(m.text)
+                .append('\u0001').append(m.time)
+        }
     }
 
     private fun recompute() {
@@ -97,4 +175,12 @@ class NotificationRepository(private val appContext: Context) {
     /** Expected listener component, for debugging / settings deep link. */
     fun listenerComponent(): ComponentName =
         ComponentName(appContext, NotificationListener::class.java)
+
+    private companion object {
+        /** How long an identical re-post of a dismissed notification is ignored. */
+        const val DISMISS_MEMORY_MS = 120_000L
+
+        /** Maximum dismissed keys remembered (LRU). */
+        const val DISMISS_MEMORY_MAX = 64
+    }
 }

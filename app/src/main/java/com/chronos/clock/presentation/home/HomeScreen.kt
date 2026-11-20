@@ -79,29 +79,21 @@ fun HomeScreen(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    // ---- notification access: keep the grant state fresh ------------------
-    // The first check runs immediately on every resume, so a grant made on
-    // the system screen shows the instant you come back; while the clock
-    // rests on screen it re-checks every 10 s (one cheap settings read) to
-    // catch a later revocation without reopening Settings.
-    // refreshNotificationAccess also flips the feature on the first time a
-    // grant is seen, so icons appear as soon as access exists.
-    // Additionally, whenever we don't yet have a live grant in memory (the
-    // moment access appears, and every app resume), the listener is force
-    // re-bound: OEM builds often drop or delay that binding while CHRONOS is
-    // closed, and a rebind backfills everything currently on screen — so
-    // icons show even for notifications that arrived while the app was shut.
+    // ---- notification access: caught up on every resume -------------------
+    // Event-driven, never polled: the check runs once per STARTED (i.e. on
+    // every resume — the only moment a grant can change, because the system
+    // consent screen is a different app). refreshNotificationAccess also
+    // flips the feature on the first time a grant is seen, so icons appear
+    // as soon as access exists. Whenever a live grant exists, the listener
+    // is force re-bound on resume: OEM builds often drop or delay that
+    // binding while CHRONOS is closed, and a rebind backfills everything
+    // currently on screen — so icons show even for notifications that
+    // arrived while the app was shut.
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            var lastGranted: Boolean? = null
-            while (true) {
-                viewModel.refreshNotificationAccess()
-                val granted = viewModel.notificationAccess.value
-                if (granted && lastGranted != true) {
-                    NotificationListener.forceRebind(context)
-                }
-                lastGranted = granted
-                delay(10_000)
+            viewModel.refreshNotificationAccess()
+            if (viewModel.notificationAccess.value) {
+                NotificationListener.forceRebind(context)
             }
         }
     }

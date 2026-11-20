@@ -80,6 +80,24 @@ class NotificationManager(
         }
     }
 
+    /**
+     * Dismiss after a successful quick reply. Besides the normal dismiss,
+     * every re-post of this notification key is kept out for a few seconds:
+     * chat apps rewrite their notification almost immediately after a reply
+     * (read receipt / "sent" echo), which used to pop the icon straight back
+     * in even though the user had just answered.
+     */
+    fun dismissAfterReply(item: NotificationItem): Boolean {
+        val dismissed = dismiss(item)
+        repository.suppressFor(item.key, REPLY_QUIET_MS)
+        return dismissed
+    }
+
     fun reply(item: NotificationItem, text: String, actionIndex: Int = 0): Boolean =
         QuickReplyHandler.send(appContext, item, actionIndex, text)
+
+    private companion object {
+        /** Quiet window after a reply: echo/read-receipt re-posts are ignored. */
+        const val REPLY_QUIET_MS = 6_000L
+    }
 }

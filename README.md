@@ -109,6 +109,13 @@ All three keep clock accuracy independent of visual effects.
   icon → reply sheet listing **all** your last unseen messages — sender, text
   and time, expanding multi-message (MessagingStyle) notifications into every
   message — with Send / Dismiss) — the officially supported Android mechanism.
+- **Dismiss means dismissed**: chat apps often re-post the *same* notification
+  right after it is dismissed (sync echo), or rewrite it immediately after an
+  inline reply (read receipt / "sent" copy). CHRONOS remembers the content you
+  just cleared and keeps it out of the icon row instead of popping the icon
+  straight back; a genuinely new message always has new text/time and appears
+  normally. The memory is in-process only, bounded (64 keys), and expires
+  after 2 minutes (6-second quiet window right after a reply).
 - **Silence message banners** (on by default): while CHRONOS is on screen no
   notification ever pops down from the top — the listener snoozes each
   message-like notification the moment it posts, so it lives only in its icon
