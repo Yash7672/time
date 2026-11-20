@@ -19,9 +19,13 @@ object AppConstants {
     /** Milliseconds of inactivity after which background effects pause. */
     const val INACTIVITY_PAUSE_MS = 30_000L
 
-    /** Frame intervals for the star field, in milliseconds. */
-    const val STAR_FRAME_INTERVAL_NORMAL_MS = 66L // ~15 fps: plenty for slow drift
-    const val STAR_FRAME_INTERVAL_BATTERY_MS = 200L // ~5 fps in battery-friendly mode
+    /**
+     * Frame intervals for the star field, in milliseconds. The drift is
+     * so slow that even 5 fps reads as smooth — every dropped frame is
+     * battery saved.
+     */
+    const val STAR_FRAME_INTERVAL_NORMAL_MS = 200L // ~5 fps: ample for slow drift
+    const val STAR_FRAME_INTERVAL_BATTERY_MS = 500L // ~2 fps in battery mode
 
     /** Repository link shown in Settings → About. */
     const val GITHUB_URL = "https://github.com/Yash7672/time"

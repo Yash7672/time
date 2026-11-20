@@ -3,7 +3,6 @@ package com.chronos.clock.presentation.settings
 import androidx.compose.runtime.Composable
 import com.chronos.clock.domain.model.StarDensity
 import com.chronos.clock.domain.model.StarSettings
-import com.chronos.clock.domain.model.StarSpeed
 import com.chronos.clock.ui.components.NoteText
 import com.chronos.clock.ui.components.OptionRow
 import com.chronos.clock.ui.components.SectionHeader
@@ -36,28 +35,11 @@ fun StarBackgroundSettingsSection(
             description = "Low ≈ 60, Medium ≈ 120, High ≈ 220 particles. " +
                 "Counts are hard-capped by the performance settings.",
         )
-
-        OptionRow(
-            title = "Star speed",
-            options = StarSpeed.entries,
-            selected = settings.speed,
-            optionLabel = { it.label },
-            onSelect = { onChange(settings.copy(speed = it)) },
-            description = "Slow ≈ one gentle screen pass every few minutes, " +
-                "Normal ≈ about a minute. Both stay subtle enough to read by.",
-        )
-
-        SwitchRow(
-            title = "Twinkling",
-            checked = settings.twinkling,
-            onCheckedChange = { onChange(settings.copy(twinkling = it)) },
-            description = "Gentle alpha modulation only; disabled automatically " +
-                "when battery saver is on.",
-        )
     }
 
     NoteText(
-        "Star updates are throttled to ~15 fps, freeze when battery saver " +
-            "is on, and pause completely whenever CHRONOS is not visible.",
+        "Star updates run at ~5 fps, freeze 30 s after your last touch, " +
+            "stop completely whenever CHRONOS is not visible, and go static " +
+            "the moment Android's own battery saver turns on.",
     )
 }

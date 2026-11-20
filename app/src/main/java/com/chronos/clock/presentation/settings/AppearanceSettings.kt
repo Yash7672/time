@@ -89,21 +89,6 @@ fun AppearanceSettingsSection(
         description = "Always-on-display style: fewer illuminated pixels, " +
             "lighter weight, wider letter-spacing.",
     )
-
-    SliderRow(
-        title = "Window brightness",
-        value = if (settings.windowBrightness < 0f) 1f else settings.windowBrightness,
-        valueRange = 0.1f..1f,
-        onChange = { onChange(settings.copy(windowBrightness = it)) },
-        valueLabel = if (settings.windowBrightness < 0f) {
-            "System"
-        } else {
-            "${(settings.windowBrightness * 100).toInt()}%"
-        },
-        description = "Applies only to the CHRONOS window; system brightness is " +
-            "never modified. This is the fixed fallback used while Auto " +
-            "brightness (Display) is off or the sensor has no reading.",
-    )
 }
 
 /**

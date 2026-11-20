@@ -43,8 +43,9 @@ All three keep clock accuracy independent of visual effects.
 - Stars are **tiny (0.6–1.8 px), dim (alpha 0.18–0.55)** with gentle sine
   twinkle; white/blue/purple in a 80/12/8 mix.
 - Particle counts are hard-capped (60/120/220 by density, ≤300 absolute).
-- Update loop is throttled to **~15 fps** (5 fps battery-friendly) instead of
-  60 fps — slow drift does not need vsync.
+- Update loop is throttled to **~5 fps** (2 fps with battery saver on) instead
+  of 60 fps — slow drift does not need vsync, and the field freezes entirely
+  30 s after the last touch.
 - **Burn-in protection**: the whole clock block drifts 1–2 px every 10 minutes
   through a deterministic cycle. Imperceptible, never affects readability.
 - **Minimal clock mode**: always-on-display style with fewer lit pixels.
@@ -133,17 +134,17 @@ All three keep clock accuracy independent of visual effects.
   Window phone never shows a dialog.
 
 ### Settings (persisted with Jetpack DataStore)
-1. **Clock** — format, seconds, date, day, size, brightness
+1. **Clock** — format, seconds, date, size, brightness
 2. **Appearance** — 6 themes (incl. Light), clock digit colour, the 3 AMOLED
-   modes, burn-in drift, minimal clock, window brightness
-3. **Star background** — enable, density (Low/Med/High), speed, twinkle
+   modes, burn-in drift, minimal clock
+3. **Star background** — enable, density (Low/Med/High)
 4. **Notifications** — access toggle, app selection, icons, indicators,
    privacy mode, quick reply, bubbles, **floating app windows** (enable
    floating-window launch, prefer floating when supported, allow normal
    full-screen fallback, show instructions for unsupported devices)
 5. **Display** — auto brightness (light sensor), keep-awake, fullscreen
-6. **Performance** — battery saver, pause stars when idle (star throttling and
-   low-fps rendering are automatic)
+6. **Performance** — battery saver (star throttling, idle pausing, low-fps
+   rendering and Android's own battery-saver detection are all automatic)
 7. **About** — version, privacy statement, licences, GitHub link, known
    Android limitations
 

@@ -29,6 +29,21 @@ data class ClockText(
  */
 object TimeUtils {
 
+    /**
+     * Date/day formatters are expensive to build, and the date block is
+     * recomposed every tick — cache one formatter per pattern + locale.
+     */
+    private val formatters =
+        java.util.concurrent.ConcurrentHashMap<String, java.time.format.DateTimeFormatter>()
+
+    private fun formatter(
+        pattern: String,
+        locale: Locale,
+    ): java.time.format.DateTimeFormatter =
+        formatters.getOrPut("$pattern|${locale.toLanguageTag()}") {
+            java.time.format.DateTimeFormatter.ofPattern(pattern, locale)
+        }
+
     fun formatClock(
         epochMillis: Long,
         use24Hour: Boolean,
@@ -73,7 +88,7 @@ object TimeUtils {
             "ja" -> "yyyy年MM月dd日"
             else -> "dd MMM yyyy"
         }
-        return java.time.format.DateTimeFormatter.ofPattern(pattern, locale).format(ldt.toLocalDate())
+        return formatter(pattern, locale).format(ldt.toLocalDate())
     }
 
     /** e.g. "Tuesday" */
@@ -83,7 +98,7 @@ object TimeUtils {
         locale: Locale = Locale.getDefault(),
     ): String {
         val ldt = Instant.ofEpochMilli(epochMillis).atZone(zone)
-        return java.time.format.DateTimeFormatter.ofPattern("EEEE", locale).format(ldt.toLocalDate())
+        return formatter("EEEE", locale).format(ldt.toLocalDate())
     }
 
     /**

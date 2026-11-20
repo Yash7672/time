@@ -1,7 +1,5 @@
 package com.chronos.clock.presentation.home
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -11,9 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -36,8 +32,8 @@ import kotlin.math.min
  *  - text colour comes from the theme palette (soft white, never #FFFFFF at
  *    full brightness unless the user raises the opacity slider),
  *  - tabular figures (`tnum`) prevent digit-width shifting,
- *  - a very subtle colon pulse marks each second and is skipped entirely when
- *    reduce-animations or battery saver is on,
+ *  - the colon is a static separator — the clock redraws nothing except the
+ *    digits themselves, once per second (or minute),
  *  - font size auto-fits the available box so rotation never clips text.
  */
 @Composable
@@ -45,7 +41,6 @@ fun ClockView(
     time: ClockText,
     settings: ClockSettings,
     minimal: Boolean,
-    reduceAnimations: Boolean,
     modifier: Modifier = Modifier,
     /** User-picked digit colour; null = the theme palette's text colour. */
     clockColor: androidx.compose.ui.graphics.Color? = null,
@@ -53,17 +48,6 @@ fun ClockView(
     val palette = Chronos.palette
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.screenWidthDp > configuration.screenHeightDp
-
-    // Colon pulse: a single reusable Animatable, restarted per second.
-    val colonAlpha = remember { Animatable(1f) }
-    LaunchedEffect(time.seconds, reduceAnimations, minimal) {
-        if (reduceAnimations || minimal || time.seconds == null) {
-            colonAlpha.snapTo(1f)
-        } else {
-            colonAlpha.snapTo(0.45f)
-            colonAlpha.animateTo(1f, tween(450))
-        }
-    }
 
     BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.Center) {
         // Auto-fit: keep the clock inside the box in both orientations.
@@ -90,7 +74,7 @@ fun ClockView(
 
         if (settings.meridiemShown) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                ClockDigits(time, baseStyle, color, colonColor, colonAlpha.value)
+                ClockDigits(time, baseStyle, color, colonColor)
                 if (time.meridiem != null) {
                     Spacer(Modifier.width((fontSize.value * 0.16f).dp))
                     Column(
@@ -110,7 +94,7 @@ fun ClockView(
                 }
             }
         } else {
-            ClockDigits(time, baseStyle, color, colonColor, colonAlpha.value)
+            ClockDigits(time, baseStyle, color, colonColor)
         }
     }
 }
@@ -121,15 +105,14 @@ private fun ClockDigits(
     style: TextStyle,
     digitColor: androidx.compose.ui.graphics.Color,
     colonColor: androidx.compose.ui.graphics.Color,
-    colonAlpha: Float,
 ) {
     val colonModifier = Modifier.padding(horizontal = (style.fontSize.value * 0.01f).dp)
     Row(verticalAlignment = Alignment.CenterVertically) {
         Digit(text = time.hours, style = style, color = digitColor)
-        Colon(style = style, color = colonColor, alpha = colonAlpha, modifier = colonModifier)
+        Colon(style = style, color = colonColor, modifier = colonModifier)
         Digit(text = time.minutes, style = style, color = digitColor)
         if (time.seconds != null) {
-            Colon(style = style, color = colonColor, alpha = colonAlpha, modifier = colonModifier)
+            Colon(style = style, color = colonColor, modifier = colonModifier)
             Digit(text = time.seconds, style = style, color = digitColor)
         }
     }
@@ -144,13 +127,12 @@ private fun Digit(text: String, style: TextStyle, color: androidx.compose.ui.gra
 private fun Colon(
     style: TextStyle,
     color: androidx.compose.ui.graphics.Color,
-    alpha: Float,
     modifier: Modifier = Modifier,
 ) {
     androidx.compose.material3.Text(
         text = ":",
         style = style,
-        color = color.copy(alpha = alpha),
+        color = color,
         modifier = modifier,
         maxLines = 1,
     )

@@ -125,8 +125,10 @@ fun HomeScreen(
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             while (true) {
                 val idle = System.currentTimeMillis() - lastInteractionMs
-                val shouldPause = settings.performance.pauseWhenInactive &&
-                    idle > AppConstants.INACTIVITY_PAUSE_MS
+                // Always on: freeze background effects 30 s after the last
+                // touch (the next tap resumes them) — a clock left on a desk
+                // must not drift stars all day.
+                val shouldPause = idle > AppConstants.INACTIVITY_PAUSE_MS
                 if (uiActive == shouldPause) {
                     uiActive = !shouldPause
                 }
@@ -284,8 +286,6 @@ private fun PortraitContent(
                     ),
                     settings = settings.clock,
                     minimal = settings.theme.minimalClockMode,
-                    reduceAnimations = settings.performance.reduceAnimations ||
-                        settings.performance.batterySaver,
                     clockColor = settings.theme.clockColor.argb?.let { Color(it) },
                 )
 
@@ -382,8 +382,6 @@ private fun LandscapeContent(
                     ),
                     settings = settings.clock,
                     minimal = settings.theme.minimalClockMode,
-                    reduceAnimations = settings.performance.reduceAnimations ||
-                        settings.performance.batterySaver,
                     clockColor = settings.theme.clockColor.argb?.let { Color(it) },
                 )
 

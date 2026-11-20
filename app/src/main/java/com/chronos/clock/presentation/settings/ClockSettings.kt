@@ -56,11 +56,8 @@ fun ClockSettingsSection(
         onCheckedChange = { onChange(settings.copy(showDate = it)) },
     )
 
-    SwitchRow(
-        title = "Show day of week",
-        checked = settings.showDay,
-        onCheckedChange = { onChange(settings.copy(showDay = it)) },
-    )
+    // The day of week rides along with the date in DateView — one row
+    // fewer, and the pair always reads as one line.
 
     SliderRow(
         title = "Clock size",
