@@ -92,6 +92,8 @@ internal fun SliderRow(
     modifier: Modifier = Modifier,
     valueLabel: String? = null,
     description: String? = null,
+    /** Discrete steps between the endpoints (0 = continuous). */
+    steps: Int = 0,
 ) {
     val palette = Chronos.palette
     Column(
@@ -127,6 +129,7 @@ internal fun SliderRow(
             value = value,
             onValueChange = onChange,
             valueRange = valueRange,
+            steps = steps,
             colors = SliderDefaults.colors(
                 thumbColor = palette.textPrimary,
                 activeTrackColor = palette.accent,

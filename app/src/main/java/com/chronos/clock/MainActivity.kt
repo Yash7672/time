@@ -37,9 +37,10 @@ import kotlin.math.log10
  *    other apps keep the user's own choice,
  *  - ambient-light sensing for auto brightness: registered only while the
  *    activity is started and only while the setting is on,
- *  - low-battery screen release: at ≤30 % charge the keep-awake flag is
- *    handed back to the system so the display sleeps by the normal
- *    screen-timeout and the clock can never run the battery to shutdown,
+ *  - low-battery screen release: at the chosen charge threshold (default
+ *    30 %, Settings → Display) the keep-awake flag is handed back to the
+ *    system so the display sleeps by the normal screen-timeout and the
+ *    clock can never run the battery to shutdown,
  *  - hosting the Compose tree.
  *
  * No service is started for the clock; nothing runs while this activity is
@@ -59,8 +60,15 @@ class MainActivity : ComponentActivity() {
         override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
     }
 
-    /** Charge at/below [LOW_BATTERY_PERCENT] → keep-awake is released. */
+    /** Policy: release the screen at/below this charge (settings-driven). */
+    private var releaseAtLowBattery = true
+    private var lowBatteryThreshold = 30
+
+    /** True once charge is at/below the threshold and release is enabled. */
     private var lowBattery = false
+
+    /** Last charge percent seen (null until the first battery broadcast). */
+    private var lastBatteryPercent: Int? = null
 
     /** The keep-awake state the settings ask for (battery can override). */
     private var keepAwakeWanted = false
@@ -116,6 +124,17 @@ class MainActivity : ComponentActivity() {
 
             // Keep the light sensor in step with the setting while visible.
             LaunchedEffect(autoBrightness) { syncLightSensor(autoBrightness) }
+
+            // Keep the low-battery policy in step with its switch/threshold.
+            LaunchedEffect(
+                settings.display.lowBatteryRelease,
+                settings.display.lowBatteryThreshold,
+            ) {
+                updateBatteryPolicy(
+                    release = settings.display.lowBatteryRelease,
+                    threshold = settings.display.lowBatteryThreshold,
+                )
+            }
 
             ChronosTheme(theme = settings.theme.theme) {
                 AppNavigation(viewModel = vm)
@@ -178,12 +197,13 @@ class MainActivity : ComponentActivity() {
     // ——— low-battery screen release ————————————————————————————————
 
     /**
-     * Keep-screen-awake with the low-battery override: at
-     * [LOW_BATTERY_PERCENT] percent or less the flag is released even when
-     * the setting asks for it, so the display sleeps by the normal system
+     * Keep-screen-awake with the low-battery override: while
+     * [releaseAtLowBattery] is on and charge sits at [lowBatteryThreshold]
+     * percent or less, the flag is released even when the keep-awake
+     * setting asks for it, so the display sleeps by the normal system
      * screen-timeout instead of lighting the phone down to a shutdown.
-     * Above the threshold the setting applies unchanged — charging back
-     * above 30 % restores it automatically.
+     * Above the threshold (or with the policy off) the setting applies
+     * unchanged — charging back up restores it automatically.
      *
      * CHRONOS never forces the screen off directly (that needs a system
      * permission no normal app can hold) — it only stops holding the
@@ -220,10 +240,24 @@ class MainActivity : ComponentActivity() {
 
     private fun updateBatteryState(intent: Intent?) {
         val level = intent?.let { batteryPercent(it) } ?: return
-        val nowLow = level <= LOW_BATTERY_PERCENT
+        lastBatteryPercent = level
+        recomputeLowBattery()
+    }
+
+    /** Applies the policy (switch + threshold + current charge) to the flag. */
+    private fun recomputeLowBattery() {
+        val level = lastBatteryPercent ?: return
+        val nowLow = releaseAtLowBattery && level <= lowBatteryThreshold
         if (nowLow == lowBattery) return
         lowBattery = nowLow
         applyKeepAwake()
+    }
+
+    /** Called from composition whenever the policy settings change. */
+    private fun updateBatteryPolicy(release: Boolean, threshold: Int) {
+        releaseAtLowBattery = release
+        lowBatteryThreshold = threshold.coerceIn(5, 50)
+        recomputeLowBattery()
     }
 
     private fun batteryPercent(intent: Intent): Int? {
@@ -271,6 +305,3 @@ class MainActivity : ComponentActivity() {
         return (0.10f + 0.90f * t * t).coerceIn(0.10f, 1f)
     }
 }
-
-/** Charge level (percent) at or below which CHRONOS releases keep-awake. */
-private const val LOW_BATTERY_PERCENT = 30

@@ -42,14 +42,46 @@ fun DisplaySettingsSection(
         description = if (settings.display.keepScreenAwake) {
             "On — the display stays lit while CHRONOS is open. This always " +
                 "costs significant battery on any device, regardless of how " +
-                "well the app is optimised. At 30% battery or less CHRONOS " +
-                "releases it automatically: the screen then sleeps by your " +
-                "system timeout, so the phone can't run down to shutdown."
+                "well the app is optimised. With low-battery release below " +
+                "enabled, it automatically gives the screen back at your " +
+                "chosen charge level."
         } else {
             "Off (recommended). The screen sleeps normally and CHRONOS stops " +
                 "all work while invisible."
         },
     )
+
+    SwitchRow(
+        title = "Low-battery screen release",
+        checked = settings.display.lowBatteryRelease,
+        onCheckedChange = {
+            onChange(settings.copy(display = settings.display.copy(lowBatteryRelease = it)))
+        },
+        description = if (settings.display.lowBatteryRelease) {
+            "At ${settings.display.lowBatteryThreshold}% charge or less, CHRONOS " +
+                "stops holding the screen awake — it locks by your normal " +
+                "system timeout, so the phone can't run down to a shutdown. " +
+                "Charging back above the threshold restores it."
+        } else {
+            "Off — the keep-awake setting above then applies at every " +
+                "battery level."
+        },
+    )
+
+    if (settings.display.lowBatteryRelease) {
+        // 5..50 in steps of 5 → 9 intervals → 8 discrete steps between ends.
+        SliderRow(
+            title = "Release at",
+            value = settings.display.lowBatteryThreshold.toFloat(),
+            valueRange = 5f..50f,
+            steps = 8,
+            onChange = {
+                val threshold = it.toInt().coerceIn(5, 50)
+                onChange(settings.copy(display = settings.display.copy(lowBatteryThreshold = threshold)))
+            },
+            valueLabel = "${settings.display.lowBatteryThreshold}%",
+        )
+    }
 
     SwitchRow(
         title = "Full-screen mode",

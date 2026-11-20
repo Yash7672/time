@@ -61,12 +61,14 @@ All three keep clock accuracy independent of visual effects.
 - Static modes draw **exactly one frame** — no frame loop at all.
 - No allocations in the draw loop: particles are precomputed per settings change.
 - `android:keepScreenOn` is **off by default** — no unnecessary screen wake-ups.
-- **Low-battery screen release**: at **30% charge or less** CHRONOS hands its
-  keep-awake flag back to Android, so the display sleeps by your normal system
-  screen-timeout and an always-on clock can never drain the phone into a
-  shutdown; charging back above 30% restores the setting. (CHRONOS never forces
-  the screen off itself — that needs a system permission — it only stops
-  holding it awake. Requires a non-"Never" system *Screen timeout*.)
+- **Low-battery screen release** (Settings → Display — switch + slider,
+  5–50% in steps of 5, default **30%**): at or below your chosen charge level
+  CHRONOS hands its keep-awake flag back to Android, so the display sleeps by
+  your normal system screen-timeout and an always-on clock can never drain the
+  phone into a shutdown; charging back above the threshold restores the
+  setting. (CHRONOS never forces the screen off itself — that needs a system
+  permission — it only stops holding it awake. Requires a non-"Never" system
+  *Screen timeout*.)
 - Honours the Android battery-saver state (read-only) and collapses effects.
 
 ### Smart notifications (privacy-first)
@@ -162,7 +164,8 @@ All three keep clock accuracy independent of visual effects.
    **floating app windows** (enable
    floating-window launch, prefer floating when supported, allow normal
    full-screen fallback, show instructions for unsupported devices)
-5. **Display** — auto brightness (light sensor), keep-awake, fullscreen
+5. **Display** — auto brightness (light sensor), keep-awake, low-battery
+   screen release (on/off + adjustable threshold), fullscreen
 6. **Performance** — battery saver (star throttling, idle pausing, low-fps
    rendering and Android's own battery-saver detection are all automatic)
 7. **About** — version, privacy statement, licences, GitHub link, known

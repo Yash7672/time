@@ -15,4 +15,14 @@ data class DisplaySettings(
      * exists (no sensor, or app in background).
      */
     val autoBrightness: Boolean = true,
+    /**
+     * Low-battery screen release: when charge falls to [lowBatteryThreshold]
+     * or below, hand the keep-awake flag back to Android so the display
+     * sleeps (locks) by the normal system screen-timeout instead of lighting
+     * the phone down to a shutdown. Only ever releases the flag CHRONOS
+     * itself set — it never forces the screen off. On by default.
+     */
+    val lowBatteryRelease: Boolean = true,
+    /** Charge percent (5–50, step 5) at or below which the screen releases. */
+    val lowBatteryThreshold: Int = 30,
 )

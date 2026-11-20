@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -73,6 +74,8 @@ class SettingsDataStore(
         val NOTIF_FLOATING_INSTRUCTIONS = booleanPreferencesKey("notif_floating_instructions")
 
         val KEEP_AWAKE = booleanPreferencesKey("keep_screen_awake")
+        val LOW_BATTERY_RELEASE = booleanPreferencesKey("low_battery_screen_release")
+        val LOW_BATTERY_THRESHOLD = intPreferencesKey("low_battery_threshold")
         val FULLSCREEN = booleanPreferencesKey("fullscreen_mode")
         val AUTO_BRIGHTNESS = booleanPreferencesKey("auto_brightness")
 
@@ -110,6 +113,7 @@ class SettingsDataStore(
             val defaults = defaultSettings(use24HourBySystem)
             fun bool(key: Preferences.Key<Boolean>, def: Boolean) = this[key] ?: def
             fun float(key: Preferences.Key<Float>, def: Float) = this[key] ?: def
+            fun int(key: Preferences.Key<Int>, def: Int) = this[key] ?: def
             fun <T : Enum<T>> enum(key: Preferences.Key<String>, values: Array<T>, def: T): T =
                 values.firstOrNull { it.name == this[key] } ?: def
 
@@ -184,6 +188,14 @@ class SettingsDataStore(
                 ),
                 display = DisplaySettings(
                     keepScreenAwake = bool(Keys.KEEP_AWAKE, defaults.display.keepScreenAwake),
+                    lowBatteryRelease = bool(
+                        Keys.LOW_BATTERY_RELEASE,
+                        defaults.display.lowBatteryRelease,
+                    ),
+                    lowBatteryThreshold = int(
+                        Keys.LOW_BATTERY_THRESHOLD,
+                        defaults.display.lowBatteryThreshold,
+                    ).coerceIn(5, 50),
                     fullscreen = bool(Keys.FULLSCREEN, defaults.display.fullscreen),
                     autoBrightness = bool(Keys.AUTO_BRIGHTNESS, defaults.display.autoBrightness),
                 ),
@@ -207,6 +219,9 @@ class SettingsDataStore(
                 if (a != b) edit[key] = b
             }
             fun putFloat(key: Preferences.Key<Float>, a: Float, b: Float) {
+                if (a != b) edit[key] = b
+            }
+            fun putInt(key: Preferences.Key<Int>, a: Int, b: Int) {
                 if (a != b) edit[key] = b
             }
             fun putEnum(key: Preferences.Key<String>, a: Enum<*>, b: Enum<*>) {
@@ -256,6 +271,8 @@ class SettingsDataStore(
             val d = current.display
             val nd = next.display
             putBool(Keys.KEEP_AWAKE, d.keepScreenAwake, nd.keepScreenAwake)
+            putBool(Keys.LOW_BATTERY_RELEASE, d.lowBatteryRelease, nd.lowBatteryRelease)
+            putInt(Keys.LOW_BATTERY_THRESHOLD, d.lowBatteryThreshold, nd.lowBatteryThreshold)
             putBool(Keys.FULLSCREEN, d.fullscreen, nd.fullscreen)
             putBool(Keys.AUTO_BRIGHTNESS, d.autoBrightness, nd.autoBrightness)
 
