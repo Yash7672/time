@@ -44,6 +44,10 @@ object TimeUtils {
             java.time.format.DateTimeFormatter.ofPattern(pattern, locale)
         }
 
+    /** Zero-padded two digits, without a Formatter allocation. */
+    private fun pad2(value: Int): String =
+        if (value < 10) "0$value" else value.toString()
+
     fun formatClock(
         epochMillis: Long,
         use24Hour: Boolean,
@@ -53,11 +57,13 @@ object TimeUtils {
     ): ClockText {
         val ldt = Instant.ofEpochMilli(epochMillis).atZone(zone)
         val hour24 = ldt.hour
-        val minutes = String.format(locale, "%02d", ldt.minute)
-        val seconds = if (showSeconds) String.format(locale, "%02d", ldt.second) else null
+        // Manual zero-padding: String.format builds a Formatter on every
+        // call, and this runs on every visible clock tick.
+        val minutes = pad2(ldt.minute)
+        val seconds = if (showSeconds) pad2(ldt.second) else null
         return if (use24Hour) {
             ClockText(
-                hours = String.format(locale, "%02d", hour24),
+                hours = pad2(hour24),
                 minutes = minutes,
                 seconds = seconds,
                 meridiem = null,
@@ -68,7 +74,7 @@ object TimeUtils {
                 else -> hour24 % 12
             }
             ClockText(
-                hours = String.format(locale, "%02d", hour12),
+                hours = pad2(hour12),
                 minutes = minutes,
                 seconds = seconds,
                 meridiem = if (hour24 < 12) "AM" else "PM",

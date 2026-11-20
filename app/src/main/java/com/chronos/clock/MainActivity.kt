@@ -138,7 +138,10 @@ class MainActivity : ComponentActivity() {
         lightRegistered = sm.registerListener(
             lightListener,
             sensor,
-            SensorManager.SENSOR_DELAY_NORMAL,
+            // 2 Hz instead of the 5 Hz default: ambient light changes over
+            // seconds, so this halves the sensor callbacks with no visible
+            // difference in auto-brightness response.
+            500_000,
         )
     }
 

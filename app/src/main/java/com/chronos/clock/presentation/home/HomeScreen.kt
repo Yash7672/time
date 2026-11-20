@@ -70,7 +70,6 @@ fun HomeScreen(
 ) {
     val palette = Chronos.palette
     val settings by viewModel.settings.collectAsStateWithLifecycle()
-    val now by viewModel.now.collectAsStateWithLifecycle()
     val groups by viewModel.notificationGroups.collectAsStateWithLifecycle()
     val accessGranted by viewModel.notificationAccess.collectAsStateWithLifecycle()
     val floatingNotice by viewModel.floatingNotice.collectAsStateWithLifecycle()
@@ -81,10 +80,12 @@ fun HomeScreen(
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     // ---- notification access: keep the grant state fresh ------------------
-    // While the screen is visible, re-check every 3 s so a grant made on the
-    // system screen (or a later revocation) is reflected without reopening
-    // Settings. refreshNotificationAccess also flips the feature on the first
-    // time a grant is seen, so icons appear as soon as access exists.
+    // The first check runs immediately on every resume, so a grant made on
+    // the system screen shows the instant you come back; while the clock
+    // rests on screen it re-checks every 10 s (one cheap settings read) to
+    // catch a later revocation without reopening Settings.
+    // refreshNotificationAccess also flips the feature on the first time a
+    // grant is seen, so icons appear as soon as access exists.
     // Additionally, whenever we don't yet have a live grant in memory (the
     // moment access appears, and every app resume), the listener is force
     // re-bound: OEM builds often drop or delay that binding while CHRONOS is
@@ -100,7 +101,7 @@ fun HomeScreen(
                     NotificationListener.forceRebind(context)
                 }
                 lastGranted = granted
-                delay(3_000)
+                delay(10_000)
             }
         }
     }
@@ -118,22 +119,17 @@ fun HomeScreen(
         }
     }
 
-    // ---- inactivity tracking: pauses background effects -------------------
-    var lastInteractionMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    // ---- inactivity: freeze background effects after a quiet spell --------
+    // Event-driven, never polled: each tap restarts a single 30 s delay, so
+    // no timer ticks between touches. A clock left on a desk freezes its
+    // star field after 30 s (the next tap resumes it instantly), and coming
+    // back from the background restarts the same grace period.
     var uiActive by remember { mutableStateOf(true) }
-    LaunchedEffect(lifecycleOwner) {
+    var idleEpoch by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(lifecycleOwner, idleEpoch) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            while (true) {
-                val idle = System.currentTimeMillis() - lastInteractionMs
-                // Always on: freeze background effects 30 s after the last
-                // touch (the next tap resumes them) — a clock left on a desk
-                // must not drift stars all day.
-                val shouldPause = idle > AppConstants.INACTIVITY_PAUSE_MS
-                if (uiActive == shouldPause) {
-                    uiActive = !shouldPause
-                }
-                delay(5_000)
-            }
+            delay(AppConstants.INACTIVITY_PAUSE_MS)
+            uiActive = false
         }
     }
 
@@ -190,7 +186,7 @@ fun HomeScreen(
             .pointerInput(Unit) {
                 detectTapGestures(
                     onTap = {
-                        lastInteractionMs = System.currentTimeMillis()
+                        idleEpoch++
                         uiActive = true
                         gearVersion++
                         gearVisible = true
@@ -210,7 +206,6 @@ fun HomeScreen(
 
         if (isLandscape) {
             LandscapeContent(
-                now = now,
                 settings = settings,
                 groups = groups,
                 accessGranted = accessGranted,
@@ -221,7 +216,6 @@ fun HomeScreen(
             )
         } else {
             PortraitContent(
-                now = now,
                 settings = settings,
                 groups = groups,
                 accessGranted = accessGranted,
@@ -249,7 +243,6 @@ fun HomeScreen(
 
 @Composable
 private fun PortraitContent(
-    now: Long,
     settings: com.chronos.clock.domain.model.AppSettings,
     groups: List<com.chronos.clock.domain.model.NotificationGroup>,
     accessGranted: Boolean,
@@ -270,33 +263,9 @@ private fun PortraitContent(
             Spacer(Modifier.weight(1f))
 
             // CENTRE: the time, then the date beneath it (time first,
-            // date second).
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.graphicsLayer {
-                    translationX = drift.x * density
-                    translationY = drift.y * density
-                },
-            ) {
-                ClockView(
-                    time = com.chronos.clock.core.utils.TimeUtils.formatClock(
-                        epochMillis = now,
-                        use24Hour = settings.clock.use24Hour,
-                        showSeconds = settings.clock.showSeconds,
-                    ),
-                    settings = settings.clock,
-                    minimal = settings.theme.minimalClockMode,
-                    clockColor = settings.theme.clockColor.argb?.let { Color(it) },
-                )
-
-                if (settings.clock.showDate || settings.clock.showDay) {
-                    DateView(
-                        nowMillis = now,
-                        settings = settings.clock,
-                        modifier = Modifier.padding(top = 12.dp),
-                    )
-                }
-            }
+            // date second) — the tick is collected inside ClockBlock, so
+            // only that small subtree recomposes each second.
+            ClockBlock(viewModel = viewModel, settings = settings, drift = drift)
 
             Spacer(Modifier.weight(1f))
 
@@ -345,7 +314,6 @@ private fun PortraitContent(
 
 @Composable
 private fun LandscapeContent(
-    now: Long,
     settings: com.chronos.clock.domain.model.AppSettings,
     groups: List<com.chronos.clock.domain.model.NotificationGroup>,
     accessGranted: Boolean,
@@ -367,32 +335,7 @@ private fun LandscapeContent(
 
             // CENTRE: the time, then the date beneath it; the whole block
             // drifts together for burn-in protection.
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.graphicsLayer {
-                    translationX = drift.x * density
-                    translationY = drift.y * density
-                },
-            ) {
-                ClockView(
-                    time = com.chronos.clock.core.utils.TimeUtils.formatClock(
-                        epochMillis = now,
-                        use24Hour = settings.clock.use24Hour,
-                        showSeconds = settings.clock.showSeconds,
-                    ),
-                    settings = settings.clock,
-                    minimal = settings.theme.minimalClockMode,
-                    clockColor = settings.theme.clockColor.argb?.let { Color(it) },
-                )
-
-                if (settings.clock.showDate || settings.clock.showDay) {
-                    DateView(
-                        nowMillis = now,
-                        settings = settings.clock,
-                        modifier = Modifier.padding(top = 8.dp),
-                    )
-                }
-            }
+            ClockBlock(viewModel = viewModel, settings = settings, drift = drift)
 
             Spacer(Modifier.weight(1f))
 
@@ -432,6 +375,54 @@ private fun LandscapeContent(
                 .align(Alignment.BottomStart)
                 .navigationBarsPadding(),
         )
+    }
+}
+
+/**
+ * Clock + date block.
+ *
+ * Collects the wall clock here rather than in the parent screen: only this
+ * small subtree recomposes on the once-per-second tick — the icon row, gear,
+ * background and screen scaffolding keep their state untouched, which is the
+ * main recomposition saving on the clock screen. The date row is fed
+ * minute-granular time, so it redraws once a minute instead of every second.
+ */
+@Composable
+private fun ClockBlock(
+    viewModel: HomeViewModel,
+    settings: com.chronos.clock.domain.model.AppSettings,
+    drift: Offset,
+) {
+    val now by viewModel.now.collectAsStateWithLifecycle()
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.graphicsLayer {
+            translationX = drift.x * density
+            translationY = drift.y * density
+        },
+    ) {
+        ClockView(
+            time = com.chronos.clock.core.utils.TimeUtils.formatClock(
+                epochMillis = now,
+                use24Hour = settings.clock.use24Hour,
+                showSeconds = settings.clock.showSeconds,
+            ),
+            settings = settings.clock,
+            minimal = settings.theme.minimalClockMode,
+            clockColor = settings.theme.clockColor.argb?.let { Color(it) },
+        )
+
+        if (settings.clock.showDate || settings.clock.showDay) {
+            val dateMillis = now - (now % 60_000L)
+            DateView(
+                nowMillis = dateMillis,
+                settings = settings.clock,
+                modifier = Modifier.padding(top = if (isLandscape) 8.dp else 12.dp),
+            )
+        }
     }
 }
 

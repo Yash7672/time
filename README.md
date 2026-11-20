@@ -55,8 +55,9 @@ All three keep clock accuracy independent of visual effects.
 - **No background service for the clock**, no wake lock, no WorkManager
   polling, no location, no network — the clock only ticks while visible.
 - Star animation pauses when the app isn't visible (`repeatOnLifecycle`) and
-  optionally after 30 s of inactivity (off by default — the sky keeps drifting,
-  resumes instantly on touch).
+  freezes **30 s after the last touch** — event-driven (one restarted delay,
+  no polling timer), resumes instantly on the next tap, and also freezes the
+  moment Android's own battery saver turns on (observed via its broadcast).
 - Static modes draw **exactly one frame** — no frame loop at all.
 - No allocations in the draw loop: particles are precomputed per settings change.
 - `android:keepScreenOn` is **off by default** — no unnecessary screen wake-ups.
