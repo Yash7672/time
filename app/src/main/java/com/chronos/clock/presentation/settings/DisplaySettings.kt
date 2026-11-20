@@ -42,7 +42,9 @@ fun DisplaySettingsSection(
         description = if (settings.display.keepScreenAwake) {
             "On — the display stays lit while CHRONOS is open. This always " +
                 "costs significant battery on any device, regardless of how " +
-                "well the app is optimised."
+                "well the app is optimised. At 30% battery or less CHRONOS " +
+                "releases it automatically: the screen then sleeps by your " +
+                "system timeout, so the phone can't run down to shutdown."
         } else {
             "Off (recommended). The screen sleeps normally and CHRONOS stops " +
                 "all work while invisible."

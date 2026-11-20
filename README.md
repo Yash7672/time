@@ -61,6 +61,12 @@ All three keep clock accuracy independent of visual effects.
 - Static modes draw **exactly one frame** — no frame loop at all.
 - No allocations in the draw loop: particles are precomputed per settings change.
 - `android:keepScreenOn` is **off by default** — no unnecessary screen wake-ups.
+- **Low-battery screen release**: at **30% charge or less** CHRONOS hands its
+  keep-awake flag back to Android, so the display sleeps by your normal system
+  screen-timeout and an always-on clock can never drain the phone into a
+  shutdown; charging back above 30% restores the setting. (CHRONOS never forces
+  the screen off itself — that needs a system permission — it only stops
+  holding it awake. Requires a non-"Never" system *Screen timeout*.)
 - Honours the Android battery-saver state (read-only) and collapses effects.
 
 ### Smart notifications (privacy-first)

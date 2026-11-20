@@ -1,10 +1,15 @@
 package com.chronos.clock
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.os.BatteryManager
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -32,6 +37,9 @@ import kotlin.math.log10
  *    other apps keep the user's own choice,
  *  - ambient-light sensing for auto brightness: registered only while the
  *    activity is started and only while the setting is on,
+ *  - low-battery screen release: at ≤30 % charge the keep-awake flag is
+ *    handed back to the system so the display sleeps by the normal
+ *    screen-timeout and the clock can never run the battery to shutdown,
  *  - hosting the Compose tree.
  *
  * No service is started for the clock; nothing runs while this activity is
@@ -49,6 +57,18 @@ class MainActivity : ComponentActivity() {
         }
 
         override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+    }
+
+    /** Charge at/below [LOW_BATTERY_PERCENT] → keep-awake is released. */
+    private var lowBattery = false
+
+    /** The keep-awake state the settings ask for (battery can override). */
+    private var keepAwakeWanted = false
+
+    private val batteryReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            updateBatteryState(intent)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -106,12 +126,14 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         (application as? ChronosApp)?.uiVisible = true
+        startBatteryWatch()
         syncLightSensor(viewModel?.settings?.value?.display?.autoBrightness ?: true)
     }
 
     override fun onStop() {
-        // The sensor never runs while CHRONOS is not visible.
+        // Sensor and battery watch never run while CHRONOS is not visible.
         unregisterLightSensor()
+        stopBatteryWatch()
         (application as? ChronosApp)?.uiVisible = false
         super.onStop()
     }
@@ -153,16 +175,71 @@ class MainActivity : ComponentActivity() {
         lightRegistered = false
     }
 
+    // ——— low-battery screen release ————————————————————————————————
+
+    /**
+     * Keep-screen-awake with the low-battery override: at
+     * [LOW_BATTERY_PERCENT] percent or less the flag is released even when
+     * the setting asks for it, so the display sleeps by the normal system
+     * screen-timeout instead of lighting the phone down to a shutdown.
+     * Above the threshold the setting applies unchanged — charging back
+     * above 30 % restores it automatically.
+     *
+     * CHRONOS never forces the screen off directly (that needs a system
+     * permission no normal app can hold) — it only stops holding the
+     * screen awake, which is precisely what the keep-awake flag does.
+     */
+    private fun applyKeepAwake() {
+        if (keepAwakeWanted && !lowBattery) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
+
+    /**
+     * ACTION_BATTERY_CHANGED is sticky: registration delivers the current
+     * level immediately, and afterwards one broadcast per battery tick —
+     * zero polling, negligible cost, active only while CHRONOS is visible.
+     */
+    private fun startBatteryWatch() {
+        val sticky = runCatching {
+            androidx.core.content.ContextCompat.registerReceiver(
+                this,
+                batteryReceiver,
+                IntentFilter(Intent.ACTION_BATTERY_CHANGED),
+                androidx.core.content.ContextCompat.RECEIVER_EXPORTED,
+            )
+        }.getOrNull()
+        updateBatteryState(sticky)
+    }
+
+    private fun stopBatteryWatch() {
+        runCatching { unregisterReceiver(batteryReceiver) }
+    }
+
+    private fun updateBatteryState(intent: Intent?) {
+        val level = intent?.let { batteryPercent(it) } ?: return
+        val nowLow = level <= LOW_BATTERY_PERCENT
+        if (nowLow == lowBattery) return
+        lowBattery = nowLow
+        applyKeepAwake()
+    }
+
+    private fun batteryPercent(intent: Intent): Int? {
+        val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+        val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+        if (level < 0 || scale <= 0) return null
+        return (level * 100) / scale
+    }
+
     private fun applyDisplayFlags(
         keepAwake: Boolean,
         fullscreen: Boolean,
         windowBrightness: Float,
     ) {
-        if (keepAwake) {
-            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        } else {
-            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        }
+        keepAwakeWanted = keepAwake
+        applyKeepAwake()
 
         val controller = WindowCompat.getInsetsController(window, window.decorView)
         // WindowInsetsCompat.Type works on every API level (minSdk 26), unlike
@@ -194,3 +271,6 @@ class MainActivity : ComponentActivity() {
         return (0.10f + 0.90f * t * t).coerceIn(0.10f, 1f)
     }
 }
+
+/** Charge level (percent) at or below which CHRONOS releases keep-awake. */
+private const val LOW_BATTERY_PERCENT = 30
